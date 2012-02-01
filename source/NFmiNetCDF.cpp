@@ -1,7 +1,8 @@
 #include "NFmiNetCDF.h"
 #include <boost/lexical_cast.hpp>
-#include "boost/date_time/gregorian/gregorian.hpp"
-#include "boost/date_time/posix_time/posix_time.hpp"
+#include <boost/filesystem.hpp>
+/*#include "boost/date_time/gregorian/gregorian.hpp"
+#include "boost/date_time/posix_time/posix_time.hpp"*/
 #include <stdexcept>
 #include <sstream>
 #include <iomanip>
@@ -13,10 +14,10 @@ using namespace std;
 #define kFloatMissing 32700.f
 
 NFmiNetCDF::NFmiNetCDF()
- : t(0)
- , x(0)
- , y(0)
- , z(0)
+ : itsTDim(0)
+ , itsXDim(0)
+ , itsYDim(0)
+ , itsZDim(0)
  , itsProjection("latitude_longitude")
  , itsProcess(0)
  , itsCentre(86)
@@ -26,10 +27,10 @@ NFmiNetCDF::NFmiNetCDF()
 }
 
 NFmiNetCDF::NFmiNetCDF(const string &theInfile)
- : t(0)
- , x(0)
- , y(0)
- , z(0)
+ : itsTDim(0)
+ , itsXDim(0)
+ , itsYDim(0)
+ , itsZDim(0)
  , itsProjection("latitude_longitude")
  , itsProcess(0)
  , itsCentre(86)
@@ -94,31 +95,31 @@ bool NFmiNetCDF::ReadDimensions() {
     // NetCDF conventions suggest x coordinate to be named "lon"
 
     if (name == "x" || name == "X" || name == "lon" || name == "longitude") {
-      x = dim;
+      itsXDim = dim;
     }
 
     // NetCDF conventions suggest y coordinate to be named "lat"
 
     if (name == "y" || name == "Y" || name == "lat" || name == "latitude") {
-      y = dim;
+      itsYDim = dim;
     }
 
     if (name == "time" || name == "rec" || dim->is_unlimited()) {
-      t = dim;
+      itsTDim = dim;
     }
 
     if (name == "level" || name == "lev" || name == "depth") {
-      z = dim;
+      itsZDim = dim;
     }
   }
 
   // Level and time dimensions must be present
 
-  if (!z || !z->is_valid()) {
+  if (!itsZDim || !itsZDim->is_valid()) {
     return false;
   }
 
-  if (!t || !t->is_valid()) {
+  if (!itsTDim || !itsTDim->is_valid()) {
     return false;
   }
 
@@ -141,7 +142,7 @@ bool NFmiNetCDF::ReadVariables() {
 
     string name = var->name();
 
-    if (static_cast<string> (var->name()) == static_cast<string> (z->name())) {
+    if (static_cast<string> (var->name()) == static_cast<string> (itsZDim->name())) {
 
       /*
        * Assume level variable name equals to level dimension name. If it does not, how
@@ -179,30 +180,10 @@ bool NFmiNetCDF::ReadVariables() {
 
       continue;
     }
-    else if (static_cast<string> (var->name()) == static_cast<string> (x->name())) {
-/*
+    else if (static_cast<string> (var->name()) == static_cast<string> (itsXDim->name())) {
+
       // X-coordinate
 
-      // Make sure unit is 'degrees_north'
-
-      string units;
-
-      for (short k=0; k<var->num_atts(); k++) {
-        att = var->get_att(k);
-
-        if (static_cast<string> (att->name()) == "units")
-          units = att->as_string(0);
-      }
-
-      if (units.empty() || units != "degrees_east") {
-        cerr << "Unit for variable " << static_cast<string> (var->name()) << " is not 'degrees_east'" << endl;
-        return false;
-      }
-
-      for (unsigned short k = 0; k < var->num_vals(); k++) {
-        itsXs.push_back(var->as_double(k));
-      }
-*/
       itsX.Init(var);
 
       vector<float> tmp = itsX.Values();
@@ -214,7 +195,7 @@ bool NFmiNetCDF::ReadVariables() {
 
       continue;
     }
-    else if (static_cast<string> (var->name()) == static_cast<string> (y->name())) {
+    else if (static_cast<string> (var->name()) == static_cast<string> (itsYDim->name())) {
 /*
       // Y-coordinate
 
@@ -258,7 +239,7 @@ bool NFmiNetCDF::ReadVariables() {
 
       continue;
     }
-    else if (static_cast<string> (var->name()) == static_cast<string> (t->name())) {
+    else if (static_cast<string> (var->name()) == static_cast<string> (itsTDim->name())) {
 
       /*
        * time
@@ -369,7 +350,7 @@ vector<string> NFmiNetCDF::Split() {
 
   vector<string> files;
 
-  NcVar *var;
+  //NcVar *var;
 
   for (unsigned int h = 0; h < itsT.Size(); h++) {
 
@@ -448,167 +429,6 @@ vector<string> NFmiNetCDF::Split() {
 
 }
 
-/*
- * Write()
- *
- * Write data from memory to NetCDF file.
- *
- * Dimension names are specific and must not be be renamed.
- * - x dimension (and variable) = lon
- * - y dimension (and variable) = lat
- * - z dimension (and variable) = level
- *   * level is counted upwards from mean sea level
- *   * unit is ... ?
- * - time dimension (and variable) = time
- *   * time should be seconds since 1970-01-01 00:00:00 (epoch)
- *
- */
-
-bool NFmiNetCDF::Write(const vector<float> &data, NcFile *theOutFile) {
-
-  NcDim *x, *y, *z, *t;
-  NcVar *xVar, *yVar, *zVar, *tVar, *parVar;
-
-  // Dimensions
-
-  if (!(x = theOutFile->add_dim("lon", itsX.Size())))
-    return false;
-
-  if (!(y = theOutFile->add_dim("lat", itsY.Size())))
-    return false;
-
-  if (!(z = theOutFile->add_dim("level", 1)))
-    return false;
-
-  if (!(t = theOutFile->add_dim("time")))
-    return false;
-
-  // Variables
-
-  // x
-
-  if (!(xVar = theOutFile->add_var("lon", ncFloat, x)))
-    return false;
-
-  if (!xVar->add_att("units", "degrees_north"))
-    return false;
-
-  if (!xVar->add_att("long_name", "longitude"))
-    return false;
-
-  if (!xVar->add_att("standard_name", "longitude"))
-    return false;
-
-  if (!xVar->add_att("axis", "x"))
-    return false;
-
- /* if (!xVar->put(&itsXs[0], itsX.Size()))
-    return false;
-*/
-  // y
-
-  if (!(yVar = theOutFile->add_var("lat", ncFloat, y)))
-    return false;
-
-  if (!yVar->add_att("units", "degrees_east"))
-    return false;
-
-  if (!yVar->add_att("long_name", "latitude"))
-      return false;
-
-  if (!yVar->add_att("standard_name", "latitude"))
-      return false;
-
-  if (!yVar->add_att("axis", "y"))
-    return false;
-/*
-  if (!yVar->put(&itsYs[0], itsY.Size()))
-    return false;
-*/
-  // z
-
-  if (!(zVar = theOutFile->add_var("level", ncFloat, z)))
-    return false;
-
-  if (!zVar->add_att("axis", "z"))
-    return false;
-
-  /*if (!zVar->put_rec(&info.level1))
-    return false;*/
-
-  string direction = itsZIsPositive ? "up" : "down";
-
-  if (!zVar->add_att("positive", direction.c_str()))
-    return false;
-
-  if (!itsZUnit.empty()) {
-    if (!zVar->add_att("units", itsZUnit.c_str()))
-     return false;
-  }
-
-  // t
-
-  if (!(tVar = theOutFile->add_var("time", ncFloat, t)))
-    return false;
-
-  if (!tVar->add_att("axis", "t"))
-    return false;
-
-  if (!tVar->add_att("units", "seconds since 1970-01-01 00:00:00"))
-    return false;
-
-  /*if (!tVar->put_rec(&info.year))
-    return false;*/
-
-  // parameter
-
-  /*if (!(parVar = theOutFile->add_var(info.parname.c_str(), ncFloat, x, y, z)))
-    return false;*/
-
-  if (!parVar->add_att("_FillValue", kFloatMissing))
-    return false;
-
-  if (!parVar->add_att("missing_value", kFloatMissing))
-    return false;
-
-  // First level is one
-
-  if (!parVar->put(&data[0], itsX.Size(), itsY.Size(), 1))
-    return false;
-
-  // Global attributes
-
-  if (!theOutFile->add_att("generating_process_identifier", static_cast<long> (itsProcess)))
-    return false;
-
-  if (!theOutFile->add_att("Conventions", "CF-1.5"))
-    return false;
-
-  time_t now;
-  time(&now);
-
-  string datetime = ctime(&now);
-
-  // ctime adds implicit newline
-
-  datetime.erase(remove(datetime.begin(), datetime.end(), '\n'), datetime.end());
-
-  if (!theOutFile->add_att("file_creation_time", datetime.c_str()))
-    return false;
-
-  if (!theOutFile->add_att("institution", "Finnish Meteorological Institute"))
-    return false;
-
-  if (!theOutFile->add_att("analysis_time", itsAnalysisTime.c_str()))
-    return false;
-
-  theOutFile->sync();
-  theOutFile->close();
-
-  return true;
-}
-
-
 string NFmiNetCDF::AnalysisTime() {
   return itsAnalysisTime;
 }
@@ -664,6 +484,38 @@ bool NFmiNetCDF::NextParam() {
 
 NFmiNetCDFVariable NFmiNetCDF::Param() {
   return *itsParamIterator;
+}
+
+void NFmiNetCDF::ResetTime() {
+  itsT.ResetValue();
+}
+
+bool NFmiNetCDF::NextTime() {
+  return itsT.NextValue();
+}
+
+float NFmiNetCDF::Time() {
+  return itsT.Value();
+}
+
+void NFmiNetCDF::ResetLevel() {
+  itsZ.ResetValue();
+}
+
+bool NFmiNetCDF::NextLevel() {
+  return itsZ.NextValue();
+}
+
+float NFmiNetCDF::Level() {
+  return itsZ.Value();
+}
+
+long NFmiNetCDF::TimeIndex() {
+  return itsT.Index();
+}
+
+long NFmiNetCDF::LevelIndex() {
+  return itsZ.Index();
 }
 
 float NFmiNetCDF::X0() {
@@ -723,7 +575,7 @@ std::vector<float> NFmiNetCDF::Values(std::string theParameter) {
 
   for (unsigned int i = 0; i  < itsParameters.size(); i++) {
     if (itsParameters[i].Name() == theParameter)
-      values = itsParameters[i].Values();
+      values = itsParameters[i].Values(TimeIndex(), LevelIndex());
   }
 
   return values;
@@ -733,7 +585,7 @@ std::vector<float> NFmiNetCDF::Values(int numOfParameter) {
 
   std::vector<float> values;
 
-  values = itsParameters[numOfParameter].Values();
+  values = itsParameters[numOfParameter].Values(TimeIndex(), LevelIndex());
 
   return values;
 }
@@ -743,8 +595,277 @@ bool NFmiNetCDF::HasDimension(const NFmiNetCDFVariable &var, const string &dim) 
   bool ret = false;
 
   if (dim == "z") {
-    ret = var.HasDimension(z);
+    ret = var.HasDimension(itsZDim);
+  }
+  else if (dim == "t") {
+    ret = var.HasDimension(itsTDim);
+  }
+  else if (dim == "x") {
+    ret = var.HasDimension(itsXDim);
+  }
+  else if (dim == "y") {
+    ret = var.HasDimension(itsYDim);
   }
 
   return ret;
+}
+
+/*
+ * WriteSlice(string)
+ *
+ * Write the current slice to file. Slice means the level/parameter combination thats
+ * defined by the iterators.
+ *
+ * If iterators are not valid, WriteSlice() returns false.
+ * If a parameter has no z dimension, WriteSlice() will ignore z iterator value.
+ *
+ */
+
+bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
+
+  NcDim *theXDim, *theYDim, *theZDim, *theTDim;
+  NcVar *theXVar, *theYVar, *theZVar, *theTVar, *theParVar;
+
+  boost::filesystem::path f(theFileName);
+  string dir  = f.parent_path().string();
+
+  if (!boost::filesystem::exists(dir)) {
+    if (!boost::filesystem::create_directories(dir)) {
+      cerr << "Unable to create directory " << dir << endl;
+      return false;
+    }
+  }
+
+  NcFile theOutFile(theFileName.c_str(), NcFile::Replace);
+
+  if(!theOutFile.is_valid()) {
+    cerr << "Unable to create file " << theFileName << endl;
+    return false;
+  }
+
+  // Dimensions
+
+  if (!(theXDim = theOutFile.add_dim(itsXDim->name(), SizeX())))
+    return false;
+
+  if (!(theYDim = theOutFile.add_dim(itsYDim->name(), SizeY())))
+    return false;
+
+  // Limit z dimension to one value
+
+  if (!(theZDim = theOutFile.add_dim(itsZDim->name(), 1)))
+    return false;
+
+  // Our unlimited dimension
+
+  if (!(theTDim = theOutFile.add_dim(itsTDim->name())))
+    return false;
+
+  // Variables
+
+  // x
+
+  if (!(theXVar = theOutFile.add_var(itsX.Name().c_str(), ncFloat, theXDim)))
+    return false;
+
+  if (!itsX.Unit().empty()) {
+    if (!theXVar->add_att("units", itsX.Unit().c_str()))
+      return false;
+  }
+
+  if (!itsX.LongName().empty()) {
+    if (!theXVar->add_att("long_name", itsX.LongName().c_str()))
+      return false;
+  }
+
+  if (!itsX.StandardName().empty()) {
+    if (!theXVar->add_att("standard_name", itsX.StandardName().c_str()))
+      return false;
+  }
+
+  if (!itsX.Axis().empty()) {
+    if (!theXVar->add_att("axis", itsX.Axis().c_str()))
+      return false;
+  }
+
+  // Put coordinate data
+
+  if (!theXVar->put(&itsX.Values()[0], SizeX()))
+    return false;
+
+  // y
+
+  if (!(theYVar = theOutFile.add_var(itsY.Name().c_str(), ncFloat, theYDim)))
+    return false;
+
+  if (!itsY.Unit().empty()) {
+    if (!theYVar->add_att("units", itsY.Unit().c_str()))
+      return false;
+  }
+
+  if (!itsY.LongName().empty()) {
+    if (!theYVar->add_att("long_name", itsY.LongName().c_str()))
+      return false;
+  }
+
+  if (!itsY.StandardName().empty()) {
+    if (!theYVar->add_att("standard_name", itsY.StandardName().c_str()))
+        return false;
+  }
+
+  if (!itsY.Axis().empty()) {
+    if (!theYVar->add_att("axis", itsY.Axis().c_str()))
+      return false;
+  }
+
+  // Put coordinate data
+
+  if (!theYVar->put(&itsY.Values()[0], SizeY()))
+    return false;
+
+  // z
+
+  if (!(theZVar = theOutFile.add_var(itsZDim->name(), ncFloat, theZDim)))
+    return false;
+
+  if (!itsZ.Unit().empty()) {
+    if (!theZVar->add_att("units", itsZ.Unit().c_str()))
+      return false;
+  }
+
+  if (!itsZ.LongName().empty()) {
+    if (!theZVar->add_att("long_name", itsZ.LongName().c_str()))
+      return false;
+  }
+
+  if (!itsZ.StandardName().empty()) {
+    if (!theZVar->add_att("standard_name", itsZ.StandardName().c_str()))
+        return false;
+  }
+
+  if (!itsZ.Axis().empty()) {
+    if (!theZVar->add_att("axis", itsZ.Axis().c_str()))
+      return false;
+  }
+
+  if (!itsZ.Positive().empty()) {
+    if (!theZVar->add_att("positive", itsZ.Positive().c_str()))
+      return false;
+  }
+
+  float zValue = Level();
+
+  if (!theZVar->put(&zValue, 1))
+    return false;
+
+  // t
+
+  if (!(theTVar = theOutFile.add_var(itsTDim->name(), ncFloat, theTDim)))
+    return false;
+
+  if (!itsT.Unit().empty()) {
+    if (!theTVar->add_att("units", itsT.Unit().c_str()))
+      return false;
+  }
+
+  if (!itsT.LongName().empty()) {
+    if (!theTVar->add_att("long_name", itsT.LongName().c_str()))
+      return false;
+  }
+
+  if (!itsT.StandardName().empty()) {
+    if (!theTVar->add_att("standard_name", itsT.StandardName().c_str()))
+      return false;
+  }
+
+  if (!itsT.Axis().empty()) {
+    if (!theTVar->add_att("axis", itsT.Axis().c_str()))
+      return false;
+  }
+
+  float tValue = Time();
+
+  if (!theTVar->put(&tValue, 1))
+    return false;
+
+  // parameter
+
+  // TODO: Check which dimensions are actually defined for a variable and their ordering
+  if (!(theParVar = theOutFile.add_var(Param().Name().c_str(), ncFloat, theTDim, theZDim, theXDim, theYDim)))
+    return false;
+
+  if (Param().Unit().empty()) {
+    if (!theParVar->add_att("units", Param().Unit().c_str()))
+      return false;
+  }
+
+  if (!Param().LongName().empty()) {
+    if (!theParVar->add_att("long_name", Param().LongName().c_str()))
+      return false;
+  }
+
+  if (!Param().StandardName().empty()) {
+    if (!theParVar->add_att("standard_name", Param().StandardName().c_str()))
+      return false;
+  }
+
+  if (!Param().Axis().empty()) {
+    if (!theParVar->add_att("axis", Param().Axis().c_str()))
+      return false;
+  }
+
+  if (!Param().FillValue() != kFloatMissing) {
+    if (!theParVar->add_att("_FillValue", Param().FillValue()))
+      return false;
+  }
+
+  if (!Param().MissingValue() != kFloatMissing) {
+    if (!theParVar->add_att("missing_value", Param().MissingValue()))
+      return false;
+  }
+
+  // First level is one (not zero)
+
+  vector<float> data = Values();
+
+  if (!theParVar->put(&data[0], 1, 1, SizeX(), SizeY()))
+    return false;
+
+  // Global attributes
+
+  if (!theOutFile.add_att("generating_process_identifier", static_cast<long> (itsProcess)))
+    return false;
+
+  if (!itsConvention.empty()) {
+    if (!theOutFile.add_att("Conventions", itsConvention.c_str()))
+      return false;
+  }
+
+  time_t now;
+  time(&now);
+
+  string datetime = ctime(&now);
+
+  // ctime adds implicit newline
+
+  datetime.erase(remove(datetime.begin(), datetime.end(), '\n'), datetime.end());
+
+  if (!theOutFile.add_att("file_creation_time", datetime.c_str()))
+    return false;
+
+  if (!itsInstitution.empty()) {
+      if (!theOutFile.add_att("institution", itsInstitution.c_str()))
+        return false;
+  }
+
+  if (!theOutFile.add_att("distributor", "Finnish Meteorological Institute"))
+    return false;
+
+  if (!theOutFile.add_att("analysis_time", itsAnalysisTime.c_str()))
+    return false;
+
+  theOutFile.sync();
+  theOutFile.close();
+
+  return true;
 }

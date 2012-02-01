@@ -1,8 +1,13 @@
 #include "NFmiNetCDFVariable.h"
+#include <boost/lexical_cast.hpp>
 
 using namespace std;
 
-NFmiNetCDFVariable::NFmiNetCDFVariable() {
+#define kFloatMissing 32700.f
+
+NFmiNetCDFVariable::NFmiNetCDFVariable()
+ : itsValuePointer(-1)
+{
 }
 
 NFmiNetCDFVariable::NFmiNetCDFVariable(NcVar *theParam) {
@@ -31,6 +36,45 @@ string NFmiNetCDFVariable::Unit() {
   return Att("units");
 }
 
+string NFmiNetCDFVariable::LongName() {
+  return Att("long_name");
+}
+
+string NFmiNetCDFVariable::StandardName() {
+  return Att("standard_name");
+}
+
+string NFmiNetCDFVariable::Axis() {
+  return Att("axis");
+}
+
+string NFmiNetCDFVariable::Positive() {
+  return Att("positive");
+}
+
+float NFmiNetCDFVariable::FillValue() {
+  string fv = Att("_FillValue");
+
+  float ret = kFloatMissing;
+
+  if (!fv.empty())
+    ret = boost::lexical_cast<float> (fv);
+
+  return ret;
+}
+
+float NFmiNetCDFVariable::MissingValue() {
+  string mv = Att("missing_value");
+
+  float ret = kFloatMissing;
+
+  if (!mv.empty())
+    ret = boost::lexical_cast<float> (mv);
+
+  return ret;
+}
+
+
 void NFmiNetCDFVariable::Unit(string theUnit) {
   itsParam->add_att("units", theUnit.c_str());
 }
@@ -56,12 +100,30 @@ string NFmiNetCDFVariable::Att(string attName) {
   return ret;
 }
 
-vector<float> NFmiNetCDFVariable::Values() {
+vector<float> NFmiNetCDFVariable::Values(long timeIndex, long levelIndex) {
+
   vector<float> values;
 
-  for (long i = 0; i < itsParam->num_vals(); i++) {
-    values.push_back(itsParam->as_double(i));
+  // Get ALL data
+
+  if (timeIndex == -1 && levelIndex == -1) {
+    values.resize(Size());
+
+    itsParam->get(&values[0], Size());
+
+    return values;
   }
+
+  long xRec = 0;
+  long yRec = 0;
+
+  itsParam->set_cur(timeIndex, levelIndex, xRec, yRec);
+
+  // Hard coded size
+
+  values.resize(256*258);
+
+  itsParam->get(&values[0], 1, 1, 256, 258);
 
   return values;
 }
@@ -82,3 +144,20 @@ bool NFmiNetCDFVariable::HasDimension(NcDim *dim) const {
 
   return ret;
 }
+
+void NFmiNetCDFVariable::ResetValue() {
+  itsValuePointer = -1;
+}
+
+bool NFmiNetCDFVariable::NextValue() {
+  return (++itsValuePointer < itsParam->num_vals());
+}
+
+float NFmiNetCDFVariable::Value() {
+  return itsParam->as_float(itsValuePointer);
+}
+
+long NFmiNetCDFVariable::Index() {
+  return itsValuePointer;
+}
+

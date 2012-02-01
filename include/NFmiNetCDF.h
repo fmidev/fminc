@@ -1,7 +1,7 @@
 /*
- * class NetCDFReader.cpp
+ * class NFmiNetCDF.cpp
  *
- * Used to load NetCDF data into NEONS.
+ * General library to access NetCDF files.
  */
 
 #include <string>
@@ -35,14 +35,20 @@ class NFmiNetCDF {
     bool IsConvention();
     std::string Convention();
 
-    bool FirstTime();
+    void ResetTime();
     bool NextTime();
+    float Time();
+    long TimeIndex();
 
-    bool FirstLocation();
+    void ResetLocation();
     bool NextLocation();
 
-    bool FirstLevel();
+    void ResetLevel();
     bool NextLevel();
+    float Level();
+    long LevelIndex();
+
+    // Different syntax
 
     void FirstParam();
     bool NextParam();
@@ -60,6 +66,8 @@ class NFmiNetCDF {
 
     bool HasDimension(const NFmiNetCDFVariable &var, const std::string &dim);
 
+    bool WriteSlice(const std::string &theFileName);
+
   private:
 
     bool ReadDimensions();
@@ -68,15 +76,16 @@ class NFmiNetCDF {
     std::vector<std::string> Split();
     bool Write(const std::vector<float> &data, NcFile *theOutFile);
 
-    NcDim *t;
-    NcDim *x;
-    NcDim *y;
-    NcDim *z;
+    NcDim *itsTDim;
+    NcDim *itsXDim;
+    NcDim *itsYDim;
+    NcDim *itsZDim;
 
     NcFile *dataFile;
 
     std::string itsConvention;
     std::string itsProjection;
+    std::string itsInstitution;
     unsigned int itsProcess;
 
     std::vector<NFmiNetCDFVariable> itsParameters;
