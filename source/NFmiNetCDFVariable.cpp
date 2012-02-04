@@ -107,10 +107,17 @@ vector<float> NFmiNetCDFVariable::Values(long timeIndex, long levelIndex) {
   // Get ALL data
 
   if (timeIndex == -1 && levelIndex == -1) {
-    values.resize(Size());
-
-    itsParam->get(&values[0], Size());
-
+  	
+  	values.resize(Size());
+  	
+  	if (itsParam->num_dims() == 1)
+  	  itsParam->get(&values[0], Size());
+  	  
+  	else {
+  	  itsParam->set_cur(0, 0, 0, 0);
+      itsParam->get(&values[0], 1, 1, 256, 258);
+  	}
+  		  
     return values;
   }
 

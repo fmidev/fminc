@@ -1,6 +1,6 @@
 LIB = fminc
 
-MAINFLAGS = -Wall -W -Wno-unused-parameter
+MAINFLAGS = -Wall -W -Wno-unused-parameter -Werror
 
 EXTRAFLAGS = -Wpointer-arith \
 	-Wcast-qual \
@@ -32,7 +32,8 @@ LDFLAGS_DEBUG =
 LDFLAGS_PROFILE =
 
 INCLUDES = -I include \
-           -I$(includedir) 
+           -I$(includedir) \
+           -I$(includedir)/netcdf-3
 
 LIBS =  -L$(libdir) \
 	-lboost_date_time \

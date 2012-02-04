@@ -5,6 +5,7 @@
 #include "boost/date_time/posix_time/posix_time.hpp"*/
 #include <stdexcept>
 #include <sstream>
+#include <fstream>
 #include <iomanip>
 #include <ctime>
 #include <algorithm>
@@ -608,6 +609,28 @@ bool NFmiNetCDF::HasDimension(const NFmiNetCDFVariable &var, const string &dim) 
   }
 
   return ret;
+}
+
+bool NFmiNetCDF::WriteSliceToCSV(const string &theFileName) {
+	
+	ofstream theOutFile;
+  theOutFile.open(theFileName.c_str());
+  
+  vector<float> Xs = itsX.Values();
+
+  vector<float> Ys = itsY.Values();
+  vector<float> values = Values();
+
+  for (unsigned int y = 0; y < Ys.size(); y++) {
+   for (unsigned int x = 0; x < Xs.size(); x++) {
+  
+  		theOutFile << Xs[x] << "," << Ys[y] << "," << values[y*Xs.size()+x] << endl;
+  	}
+  }
+  
+  theOutFile.close();
+	
+	return true;
 }
 
 /*

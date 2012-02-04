@@ -24,8 +24,6 @@ class NFmiNetCDF {
     unsigned int Process();
     void Process(unsigned int theProcess);
 
-    std::vector<float> Slice(unsigned int theLevel,std::string theParameter);
-
     long int SizeX();
     long int SizeY();
     long int SizeZ();
@@ -67,6 +65,7 @@ class NFmiNetCDF {
     bool HasDimension(const NFmiNetCDFVariable &var, const std::string &dim);
 
     bool WriteSlice(const std::string &theFileName);
+    bool WriteSliceToCSV(const std::string &theFileName);
 
   private:
 
