@@ -72,7 +72,7 @@ class NFmiNetCDF {
     bool ReadDimensions();
     bool ReadVariables();
     bool ReadAttributes();
-    std::vector<std::string> Split();
+ 
     bool Write(const std::vector<float> &data, NcFile *theOutFile);
 
     NcDim *itsTDim;

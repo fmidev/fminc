@@ -336,72 +336,9 @@ bool NFmiNetCDF::ReadAttributes() {
   return true;
 }
 
-/*
- * Split()
- *
- * This function will split one NetCDF file to multiple files, one per
- * time/parameter/level combination.
- *
- * This function will also modify, if necessary, NetCDF variable, dimension and/or
- * attribute names so that they are consistent with in FMI production system.
- *
- */
-
-vector<string> NFmiNetCDF::Split() {
-
-  vector<string> files;
-
-  //NcVar *var;
-
-  for (unsigned int h = 0; h < itsT.Size(); h++) {
-
-  //  double time = itsTimes[h];
-
-    //info.fcst_per = time;
-/*
-    for (unsigned int i = 0; i < itsParameters.size(); i++) {
-
-      NFmiNetCDFVariable p = itsParameters[i];
-
-      string param = p.Name();
-      var = dataFile->get_var(param.c_str());
-
-      float theMissingValue = 0;
-
-      NcAtt *att = var->get_att("missing_value");
-
-      if (att == 0)
-        theMissingValue = kFloatMissing;
-
-      else
-        theMissingValue = att->as_float(0);
-
-      //unsigned long univ_id = itsNewbaseParameters[i];
-
-      // Slurp all data from one time step
-
-      NcValues *vals = var->get_rec();
-
-      // Get number of levels for this parameter
-
-      unsigned int num_levels = 1;
-
-      for (unsigned short d = 0; d < var->num_dims(); d++) {
-        NcDim *dim = dataFile->get_dim(d);
-
-        if (dim->name() == z->name()) {
-          num_levels = itsZ.Size();
-        }
-      }
-
-      for (unsigned int j = 0; j < num_levels; j++) {
-
-        // Slice contains all data for one level
-
-        vector<float> slice;
 
         // Flatten 3D array to 1D array
-
+/*
         for (unsigned int x = 0; x < itsX.Size(); x++) {
           for (unsigned int y = 0; y < itsY.Size(); y++) {
             float value = vals->as_float(j*(itsX.Size()*itsY.Size()) + y * itsX.Size() + x);
@@ -412,24 +349,8 @@ vector<string> NFmiNetCDF::Split() {
             slice.push_back(value);
           }
         }
-
-        //double level = itsLevels[j];
-
-        NcFile nfile(info.filename.c_str(), NcFile::Replace);
-
-        if (!(Write(slice, &nfile, info)))
-          throw runtime_error("Error splitting data");
-
-        files.push_back(info.filename);
-
-      }
-    }*/
-  }
-
-  return files;
-
-}
-
+*/
+  
 string NFmiNetCDF::AnalysisTime() {
   return itsAnalysisTime;
 }
@@ -817,7 +738,7 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
   if (!(theParVar = theOutFile.add_var(Param().Name().c_str(), ncFloat, theTDim, theZDim, theXDim, theYDim)))
     return false;
 
-  if (Param().Unit().empty()) {
+  if (!Param().Unit().empty()) {
     if (!theParVar->add_att("units", Param().Unit().c_str()))
       return false;
   }
