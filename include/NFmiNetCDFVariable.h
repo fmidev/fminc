@@ -26,19 +26,24 @@ class NFmiNetCDFVariable {
 
     std::vector<float> Values(long timeIndex = -1, long levelIndex = -1);
 
-    float Value(int num);
-
     bool HasDimension(NcDim *dim) const;
 
     void ResetValue();
     bool NextValue();
     float Value();
     long Index();
+    void Index(long theValuePointer);
 
   private:
 
     std::string Att(std::string attName);
     long itsValuePointer;
     NcVar *itsParam;
+    std::vector<NcDim *> itsDims;
+
+    NcDim *itsTDim;
+    NcDim *itsZDim;
+    NcDim *itsXDim;
+    NcDim *itsYDim;
 
 };

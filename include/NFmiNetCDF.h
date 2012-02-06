@@ -55,8 +55,8 @@ class NFmiNetCDF {
     float X0();
     float Y0();
 
-    float ValueT(int num);
-    float ValueZ(int num);
+    float ValueT(long num);
+    float ValueZ(long num);
 
     std::string Projection();
     std::vector<float> Values(std::string theParameter);
@@ -66,6 +66,12 @@ class NFmiNetCDF {
 
     bool WriteSlice(const std::string &theFileName);
     bool WriteSliceToCSV(const std::string &theFileName);
+
+    bool FlipX();
+    void FlipX(bool theXFlip);
+
+    bool FlipY();
+    void FlipY(bool theYFlip);
 
   private:
 
@@ -116,5 +122,7 @@ class NFmiNetCDF {
 
     short itsStep; // minutes
 
+    bool itsXFlip;
+    bool itsYFlip;
 
 };

@@ -24,6 +24,8 @@ NFmiNetCDF::NFmiNetCDF()
  , itsCentre(86)
  , itsAnalysisTime("")
  , itsStep(0)
+ , itsXFlip(false)
+ , itsYFlip(false)
 {
 }
 
@@ -37,6 +39,8 @@ NFmiNetCDF::NFmiNetCDF(const string &theInfile)
  , itsCentre(86)
  , itsAnalysisTime("")
  , itsStep(0)
+ , itsXFlip(false)
+ , itsYFlip(false)
 {
   Read(theInfile);
 }
@@ -479,12 +483,14 @@ float NFmiNetCDF::Y0() {
 
 }
 
-float NFmiNetCDF::ValueT(int num) {
-  return itsT.Value(num);
+float NFmiNetCDF::ValueT(long num) {
+  itsT.Index(num);
+  return itsT.Value();
 }
 
-float NFmiNetCDF::ValueZ(int num) {
-  return itsZ.Value(num);
+float NFmiNetCDF::ValueZ(long num) {
+  itsX.Index(num);
+  return itsZ.Value();
 }
 
 std::string NFmiNetCDF::Projection() {
@@ -539,7 +545,14 @@ bool NFmiNetCDF::WriteSliceToCSV(const string &theFileName) {
   
   vector<float> Xs = itsX.Values();
 
+  if (itsXFlip)
+    reverse(Xs.begin(), Xs.end());
+
   vector<float> Ys = itsY.Values();
+
+  if (itsYFlip)
+    reverse(Ys.begin(), Ys.end());
+
   vector<float> values = Values();
 
   for (unsigned int y = 0; y < Ys.size(); y++) {
@@ -634,7 +647,14 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
 
   // Put coordinate data
 
-  if (!theXVar->put(&itsX.Values()[0], SizeX()))
+  // Flip x values if requested
+
+  vector<float> xValues = itsX.Values();
+
+  if (itsXFlip)
+    reverse(xValues.begin(), xValues.end());
+
+  if (!theXVar->put(&xValues[0], SizeX()))
     return false;
 
   // y
@@ -664,7 +684,14 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
 
   // Put coordinate data
 
-  if (!theYVar->put(&itsY.Values()[0], SizeY()))
+  // Flip y values if requested
+
+  vector<float> yValues = itsY.Values();
+
+  if (itsYFlip)
+    reverse(yValues.begin(), yValues.end());
+
+  if (!theYVar->put(&yValues[0], SizeY()))
     return false;
 
   // z
@@ -735,6 +762,7 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
   // parameter
 
   // TODO: Check which dimensions are actually defined for a variable and their ordering
+
   if (!(theParVar = theOutFile.add_var(Param().Name().c_str(), ncFloat, theTDim, theZDim, theXDim, theYDim)))
     return false;
 
@@ -758,19 +786,18 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
       return false;
   }
 
-  if (!Param().FillValue() != kFloatMissing) {
-    if (!theParVar->add_att("_FillValue", Param().FillValue()))
-      return false;
-  }
+  // Fill value should be the same as missing value
 
-  if (!Param().MissingValue() != kFloatMissing) {
+  if ((Param().FillValue() == Param().MissingValue()) != kFloatMissing) {
+    if (!theParVar->add_att("_FillValue", Param().FillValue()))
+        return false;
     if (!theParVar->add_att("missing_value", Param().MissingValue()))
       return false;
   }
 
   // First level is one (not zero)
 
-  vector<float> data = Values();
+  vector<float> data = Param().Values(TimeIndex(), LevelIndex());
 
   if (!theParVar->put(&data[0], 1, 1, SizeX(), SizeY()))
     return false;
@@ -812,4 +839,30 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
   theOutFile.close();
 
   return true;
+}
+
+/*
+ * FlipX() and FlipX(bool)
+ * FlipY() and FlipY(bool)
+ *
+ * If itsXFlip is set, when writing slice to NetCDF of CSV file the values of X axis
+ * are flipped, ie. from 1 2 3 we have 3 2 1.
+ *
+ * Same applies for Y axis.
+ */
+
+bool NFmiNetCDF::FlipX() {
+  return itsXFlip;
+}
+
+void NFmiNetCDF::FlipX(bool theXFlip) {
+  itsXFlip = theXFlip;
+}
+
+bool NFmiNetCDF::FlipY() {
+  return itsYFlip;
+}
+
+void NFmiNetCDF::FlipY(bool theYFlip) {
+  itsYFlip = theYFlip;
 }

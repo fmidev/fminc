@@ -16,6 +16,21 @@ NFmiNetCDFVariable::NFmiNetCDFVariable(NcVar *theParam) {
 
 bool NFmiNetCDFVariable::Init(NcVar *theVariable) {
   itsParam = theVariable;
+
+  for (unsigned short i = 0; i < itsParam->num_dims(); i++) {
+    NcDim *dim = itsParam->get_dim(i);
+
+    string name = static_cast<string> (dim->name());
+
+    if (name == "x" || name == "X" || name == "lon" || name == "longitude")
+      itsXDim = dim;
+
+    else if (name == "y" || name == "Y" || name == "lat" || name == "latitude")
+      itsYDim = dim;
+
+    itsDims.push_back(dim);
+  }
+
   return true;
 }
 
@@ -100,6 +115,10 @@ string NFmiNetCDFVariable::Att(string attName) {
   return ret;
 }
 
+/*
+ * Values()
+ */
+
 vector<float> NFmiNetCDFVariable::Values(long timeIndex, long levelIndex) {
 
   vector<float> values;
@@ -110,12 +129,30 @@ vector<float> NFmiNetCDFVariable::Values(long timeIndex, long levelIndex) {
   	
   	values.resize(Size());
   	
-  	if (itsParam->num_dims() == 1)
+  	// Support only for one-dimension and four-dimension parameters
+
+  	if (itsDims.size() == 1) {
   	  itsParam->get(&values[0], Size());
-  	  
+  	}
   	else {
+
   	  itsParam->set_cur(0, 0, 0, 0);
-      itsParam->get(&values[0], 1, 1, 256, 258);
+
+  	  vector<long> c;
+
+  	  c.resize(itsDims.size()-2);
+
+      for (unsigned short i = 0; i < itsDims.size(); i++) {
+        if (itsDims[i] == itsTDim || itsDims[i] == itsZDim) {
+          c[i] = 1;
+          continue;
+        }
+
+        c[i] = itsDims[i]->size();
+      }
+
+      //itsParam->get(&values[0], 1, 1, 256, 258);
+  	  itsParam->get(&values[0], &c[0]);
   	}
   		  
     return values;
@@ -124,20 +161,24 @@ vector<float> NFmiNetCDFVariable::Values(long timeIndex, long levelIndex) {
   long xRec = 0;
   long yRec = 0;
 
+  // Hard-coded order of dimensions: time, level, x, y
+
   itsParam->set_cur(timeIndex, levelIndex, xRec, yRec);
 
-  // Hard coded size
+  // Size of one slice (x*y)
 
-  values.resize(256*258);
+  values.resize(itsXDim->size()*itsYDim->size());
 
-  itsParam->get(&values[0], 1, 1, 256, 258);
+  itsParam->get(&values[0], 1, 1, itsXDim->size(), itsYDim->size());
 
   return values;
 }
 
+/*
 float NFmiNetCDFVariable::Value(int num) {
   return itsParam->as_float(num);
 }
+*/
 
 bool NFmiNetCDFVariable::HasDimension(NcDim *dim) const {
   bool ret = false;
@@ -166,5 +207,9 @@ float NFmiNetCDFVariable::Value() {
 
 long NFmiNetCDFVariable::Index() {
   return itsValuePointer;
+}
+
+void NFmiNetCDFVariable::Index(long theValuePointer) {
+  itsValuePointer = theValuePointer;
 }
 
