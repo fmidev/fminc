@@ -70,9 +70,17 @@ bool NFmiNetCDF::Read(const string &theInfile) {
   if (!ReadVariables())
     return false;
 
-  if (itsParameters.size()) {
+  if (itsParameters.size() == 0) {
     return false;
   }
+
+  // Set initial time and level values since they are easilly forgotten
+  
+  ResetTime();
+  NextTime();
+  
+  ResetLevel();
+  NextLevel();
 
   return true;
 }
@@ -161,10 +169,6 @@ bool NFmiNetCDF::ReadVariables() {
 
       itsZ.Init(var);
 
-      for (unsigned short k = 0; k < var->num_vals(); k++) {
-        //itsLevels.push_back(var->as_double(k)); // Note! No data type check (will segfault if level data type is not double)
-      }
-
       // Check for attributes
 
       for (unsigned short k = 0; k< var->num_atts(); k++) {
@@ -201,38 +205,9 @@ bool NFmiNetCDF::ReadVariables() {
       continue;
     }
     else if (static_cast<string> (var->name()) == static_cast<string> (itsYDim->name())) {
-/*
+
       // Y-coordinate
 
-      // Make sure unit is 'degrees_north'
-
-      string units;
-
-      for (short k=0; k<var->num_atts(); k++) {
-        att = var->get_att(k);
-
-        if (static_cast<string> (att->name()) == "units")
-          units = att->as_string(0);
-      }
-
-      if (units.empty() || units != "degrees_north") {
-        cerr << "Unit for variable " << static_cast<string> (var->name()) << " is not 'degrees_north'" << endl;
-        return false;
-      }
-
-      for (unsigned short k = 0; k < var->num_vals(); k++) {
-        itsYs.push_back(var->as_double(k));
-      }
-
-      if (itsYs.size() > 0) {
-        vector<double> tmp = itsYs;
-
-        sort (tmp.begin(), tmp.end());
-
-        itsBottomLeftLatitude = tmp[0];
-        itsTopRightLatitude = tmp[tmp.size()-1];
-      }
-*/
       itsY.Init(var);
 
       vector<float> tmp = itsY.Values();
@@ -251,7 +226,7 @@ bool NFmiNetCDF::ReadVariables() {
        *
        * Time in NetCDF is annoingly stupid: instead of using full timestamps or analysistime
        * + offset, an arbitrary point of time in the past is chosen and all time is an offset
-       * to that time.        *
+       * to that time.
        */
 /*
       for (short k=0; k<var->num_atts(); k++) {
@@ -278,6 +253,7 @@ bool NFmiNetCDF::ReadVariables() {
       if (itsTimes.size() > 1)
         itsStep = itsTimes[1] - itsTimes[0];
 */
+
       itsT.Init(var);
 
       continue;
@@ -509,14 +485,16 @@ std::vector<float> NFmiNetCDF::Values(std::string theParameter) {
   return values;
 }
 
-std::vector<float> NFmiNetCDF::Values(int numOfParameter) {
+std::vector<float> NFmiNetCDF::Values() {
 
   std::vector<float> values;
-
-  values = itsParameters[numOfParameter].Values(TimeIndex(), LevelIndex());
+  
+  values = Param().Values(TimeIndex(), LevelIndex());
 
   return values;
 }
+
+
 
 bool NFmiNetCDF::HasDimension(const NFmiNetCDFVariable &var, const string &dim) {
 

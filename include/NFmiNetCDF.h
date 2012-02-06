@@ -60,7 +60,7 @@ class NFmiNetCDF {
 
     std::string Projection();
     std::vector<float> Values(std::string theParameter);
-    std::vector<float> Values(int numOfParameter = 0);
+    std::vector<float> Values();
 
     bool HasDimension(const NFmiNetCDFVariable &var, const std::string &dim);
 
@@ -98,11 +98,11 @@ class NFmiNetCDF {
     NFmiNetCDFVariable itsX;
     NFmiNetCDFVariable itsY;
     NFmiNetCDFVariable itsT;
-
+/*
     std::vector<double>::iterator itsZIterator;
     std::vector<double>::iterator itsXIterator;
     std::vector<double>::iterator itsYIterator;
-    std::vector<double>::iterator itsTiterator;
+    std::vector<double>::iterator itsTiterator;*/
     std::vector<NFmiNetCDFVariable>::iterator itsParamIterator;
 
     bool itsZIsPositive;
