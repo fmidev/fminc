@@ -38,8 +38,15 @@ class NFmiNetCDF {
     float Time();
     long TimeIndex();
 
-    void ResetLocation();
-    bool NextLocation();
+    void ResetX();
+    bool NextX();
+    float X();
+    long XIndex();
+    
+    void ResetY();
+    bool NextY();
+    float Y();
+    long YIndex();
 
     void ResetLevel();
     bool NextLevel();
@@ -72,6 +79,9 @@ class NFmiNetCDF {
 
     bool FlipY();
     void FlipY(bool theYFlip);
+    
+    float XResolution();
+    float YResolution();
 
   private:
 
@@ -98,11 +108,7 @@ class NFmiNetCDF {
     NFmiNetCDFVariable itsX;
     NFmiNetCDFVariable itsY;
     NFmiNetCDFVariable itsT;
-/*
-    std::vector<double>::iterator itsZIterator;
-    std::vector<double>::iterator itsXIterator;
-    std::vector<double>::iterator itsYIterator;
-    std::vector<double>::iterator itsTiterator;*/
+
     std::vector<NFmiNetCDFVariable>::iterator itsParamIterator;
 
     bool itsZIsPositive;
@@ -124,5 +130,8 @@ class NFmiNetCDF {
 
     bool itsXFlip;
     bool itsYFlip;
+    
+    float itsXResolution;
+    float itsYResolution;
 
 };

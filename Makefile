@@ -125,8 +125,6 @@ debug: objdir $(LIB)
 release: objdir $(LIB)
 profile: objdir $(LIB)
 
-# $(CC) $(LDFLAGS) -o $@ obj/$@.o $(SUBOBJFILES) $(LIBS)
-
 $(LIB): $(OBJS)
 	ar rcs $(libdir)/lib$(LIB).a $(OBJFILES)
 

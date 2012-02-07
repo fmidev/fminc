@@ -9,10 +9,12 @@
 #include <iomanip>
 #include <ctime>
 #include <algorithm>
+#include <cmath>
 
 using namespace std;
 
-#define kFloatMissing 32700.f
+const float kFloatMissing = 32700.f;
+const float MAX_COORDINATE_RESOLUTION_ERROR = 1e-4;
 
 NFmiNetCDF::NFmiNetCDF()
  : itsTDim(0)
@@ -26,6 +28,8 @@ NFmiNetCDF::NFmiNetCDF()
  , itsStep(0)
  , itsXFlip(false)
  , itsYFlip(false)
+ , itsXResolution(0)
+ , itsYResolution(0)
 {
 }
 
@@ -41,6 +45,8 @@ NFmiNetCDF::NFmiNetCDF(const string &theInfile)
  , itsStep(0)
  , itsXFlip(false)
  , itsYFlip(false)
+ , itsXResolution(0)
+ , itsYResolution(0)
 {
   Read(theInfile);
 }
@@ -197,11 +203,39 @@ bool NFmiNetCDF::ReadVariables() {
 
       vector<float> tmp = itsX.Values();
 
-      sort (tmp.begin(), tmp.end());
-
+      if (itsXFlip)
+        reverse(tmp.begin(), tmp.end());
+      
       itsX0 = tmp[0];
       itsX1 = tmp[tmp.size()-1];
 
+      if (tmp.size() > 1) {
+      	
+      	// Check resolution 
+      	
+      	float resolution = 0;
+      	float prevResolution = 0;
+      	
+        float prevX = itsX0;
+        
+      	for (unsigned int k = 1; k < tmp.size(); k++) {
+          resolution = tmp[k] - prevX;
+          
+          if (k == 1)
+          	prevResolution = resolution;
+          
+          if (abs(resolution-prevResolution) > MAX_COORDINATE_RESOLUTION_ERROR) {
+            cerr << "X dimension resolution is not constant, diff: " << (prevResolution-resolution) << endl;
+            return false;
+          }
+          
+          prevResolution = resolution;
+          prevX = tmp[k]; 
+      	}
+      	
+      	itsXResolution = prevResolution;
+      }
+      
       continue;
     }
     else if (static_cast<string> (var->name()) == static_cast<string> (itsYDim->name())) {
@@ -212,11 +246,39 @@ bool NFmiNetCDF::ReadVariables() {
 
       vector<float> tmp = itsY.Values();
 
-      sort (tmp.begin(), tmp.end());
+      if (itsYFlip)
+        reverse(tmp.begin(), tmp.end());
 
       itsY0 = tmp[0];
       itsY1 = tmp[tmp.size()-1];
 
+      if (tmp.size() > 1) {
+      	
+      	// Check resolution 
+      	
+      	float resolution = 0;
+      	float prevResolution = 0;
+      	
+        float prevY = itsY0;
+        
+      	for (unsigned int k = 1; k < tmp.size(); k++) {
+          resolution = tmp[k] - prevY;
+          
+          if (k == 1)
+          	prevResolution = resolution;
+          
+          if (abs(resolution-prevResolution) > MAX_COORDINATE_RESOLUTION_ERROR) {
+            cerr << "Y dimension resolution is not constant, diff: " << (prevResolution-resolution) << endl;
+            return false;
+          }
+          
+          prevResolution = resolution;
+          prevY = tmp[k]; 
+      	}
+      	
+      	itsYResolution = prevResolution;
+      }
+      
       continue;
     }
     else if (static_cast<string> (var->name()) == static_cast<string> (itsTDim->name())) {
@@ -420,6 +482,37 @@ long NFmiNetCDF::LevelIndex() {
   return itsZ.Index();
 }
 
+void NFmiNetCDF::ResetX() {
+  itsX.ResetValue();
+}
+
+bool NFmiNetCDF::NextX() {
+  return itsX.NextValue();
+}
+
+float NFmiNetCDF::X() {
+  return itsX.Value();
+}
+
+long NFmiNetCDF::XIndex() {
+  return itsX.Index();
+}
+
+void NFmiNetCDF::ResetY() {
+  itsY.ResetValue();
+}
+
+bool NFmiNetCDF::NextY() {
+  return itsY.NextValue();
+}
+
+float NFmiNetCDF::Y() {
+  return itsY.Value();
+}
+
+long NFmiNetCDF::YIndex() {
+  return itsY.Index();
+}
 float NFmiNetCDF::X0() {
 
   if (itsX0 == kFloatMissing) {
@@ -465,9 +558,10 @@ float NFmiNetCDF::ValueT(long num) {
 }
 
 float NFmiNetCDF::ValueZ(long num) {
-  itsX.Index(num);
+  itsZ.Index(num);
   return itsZ.Value();
 }
+
 
 std::string NFmiNetCDF::Projection() {
   return itsProjection;
@@ -843,4 +937,12 @@ bool NFmiNetCDF::FlipY() {
 
 void NFmiNetCDF::FlipY(bool theYFlip) {
   itsYFlip = theYFlip;
+}
+
+float NFmiNetCDF::XResolution() {
+	return itsXResolution;
+}
+
+float NFmiNetCDF::YResolution() {
+	return itsYResolution;
 }
