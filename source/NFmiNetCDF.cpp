@@ -14,7 +14,7 @@
 using namespace std;
 
 const float kFloatMissing = 32700.f;
-const float MAX_COORDINATE_RESOLUTION_ERROR = 1e-4;
+const float MAX_COORDINATE_RESOLUTION_ERROR = 1e-4f;
 
 NFmiNetCDF::NFmiNetCDF()
  : itsTDim(0)
