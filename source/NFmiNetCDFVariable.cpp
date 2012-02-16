@@ -28,6 +28,12 @@ bool NFmiNetCDFVariable::Init(NcVar *theVariable) {
     else if (name == "y" || name == "Y" || name == "lat" || name == "latitude")
       itsYDim = dim;
 
+    else if (name == "time" || name == "rec" || dim->is_unlimited())
+      itsTDim = dim;
+
+    else if (name == "level" || name == "lev" || name == "depth")
+      itsZDim = dim;
+
     itsDims.push_back(dim);
   }
 
@@ -122,6 +128,11 @@ string NFmiNetCDFVariable::Att(string attName) {
 vector<float> NFmiNetCDFVariable::Values(long timeIndex, long levelIndex) {
 
   vector<float> values;
+  vector<long> c;
+  vector<long> d;
+
+  long tDimSize = 1;
+  long zDimSize = 1;
 
   // Get ALL data
 
@@ -144,15 +155,14 @@ vector<float> NFmiNetCDFVariable::Values(long timeIndex, long levelIndex) {
 
       for (unsigned short i = 0; i < itsDims.size(); i++) {
         if (itsDims[i] == itsTDim || itsDims[i] == itsZDim) {
-          c[i] = 1;
+          d[i] = 1;
           continue;
         }
 
-        c[i] = itsDims[i]->size();
+        d[i] = itsDims[i]->size();
       }
 
-      //itsParam->get(&values[0], 1, 1, 256, 258);
-  	  itsParam->get(&values[0], &c[0]);
+  	  itsParam->get(&values[0], &d[0]);
   	}
   		  
     return values;
@@ -163,13 +173,56 @@ vector<float> NFmiNetCDFVariable::Values(long timeIndex, long levelIndex) {
 
   // Hard-coded order of dimensions: time, level, x, y
 
-  itsParam->set_cur(timeIndex, levelIndex, xRec, yRec);
+  /*
+   * Set cursor to correct place. We need to have correct dimension value AND
+   * correct ordering of dimensions.
+   */
 
-  // Size of one slice (x*y)
+  c.resize(itsDims.size());
+  d.resize(itsDims.size());
+
+  for (unsigned short i = 0; i < itsDims.size(); i++) {
+
+    if (itsDims[i] == itsTDim) {// || itsDims[i] == itsZDim) {
+      c[i] = timeIndex;
+      d[i] = tDimSize;
+      continue;
+    }
+    else if (itsZDim->is_valid() && itsDims[i] == itsZDim) {
+      c[i] = levelIndex;
+      d[i] = zDimSize;
+      continue;
+    }
+    else if (itsDims[i] == itsXDim) {
+      c[i] = xRec;
+      d[i] = itsDims[i]->size();
+      continue;
+    }
+    else if (itsDims[i] == itsYDim) {
+      c[i] = yRec;
+      d[i] = itsDims[i]->size();
+      continue;
+    }
+    else {
+      cerr << "Invalid dimension: " << itsDims[i]->name() << endl;
+      return values;
+    }
+  }
+
+  itsParam->set_cur(&c[0]);
+
+  //itsParam->set_cur(timeIndex, levelIndex, xRec, yRec);
+
+  /*
+   * Get values.
+   *
+   * We always get only one slice, ie data from one time, one level and one x*y-area.
+   */
 
   values.resize(itsXDim->size()*itsYDim->size());
 
-  itsParam->get(&values[0], 1, 1, itsXDim->size(), itsYDim->size());
+  //itsParam->get(&values[0], 1, 1, itsXDim->size(), itsYDim->size());
+  itsParam->get(&values[0], &d[0]);
 
   return values;
 }
