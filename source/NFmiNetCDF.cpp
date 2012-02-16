@@ -25,6 +25,8 @@ NFmiNetCDF::NFmiNetCDF()
  , itsProcess(0)
  , itsCentre(86)
  , itsAnalysisTime("")
+ , itsX0(kFloatMissing)
+ , itsY0(kFloatMissing)
  , itsStep(0)
  , itsXFlip(false)
  , itsYFlip(false)
@@ -42,6 +44,8 @@ NFmiNetCDF::NFmiNetCDF(const string &theInfile)
  , itsProcess(0)
  , itsCentre(86)
  , itsAnalysisTime("")
+ , itsX0(kFloatMissing)
+ , itsY0(kFloatMissing)
  , itsStep(0)
  , itsXFlip(false)
  , itsYFlip(false)
@@ -80,7 +84,7 @@ bool NFmiNetCDF::Read(const string &theInfile) {
     return false;
   }
 
-  // Set initial time and level values since they are easilly forgotten
+  // Set initial time and level values since they are easily forgotten
   
   ResetTime();
   NextTime();
@@ -205,9 +209,6 @@ bool NFmiNetCDF::ReadVariables() {
 
       if (itsXFlip)
         reverse(tmp.begin(), tmp.end());
-      
-      itsX0 = tmp[0];
-      itsX1 = tmp[tmp.size()-1];
 
       if (tmp.size() > 1) {
       	
@@ -216,7 +217,7 @@ bool NFmiNetCDF::ReadVariables() {
       	float resolution = 0;
       	float prevResolution = 0;
       	
-        float prevX = itsX0;
+        float prevX = tmp[0];
         
       	for (unsigned int k = 1; k < tmp.size(); k++) {
           resolution = tmp[k] - prevX;
@@ -249,9 +250,6 @@ bool NFmiNetCDF::ReadVariables() {
       if (itsYFlip)
         reverse(tmp.begin(), tmp.end());
 
-      itsY0 = tmp[0];
-      itsY1 = tmp[tmp.size()-1];
-
       if (tmp.size() > 1) {
       	
       	// Check resolution 
@@ -259,7 +257,7 @@ bool NFmiNetCDF::ReadVariables() {
       	float resolution = 0;
       	float prevResolution = 0;
       	
-        float prevY = itsY0;
+        float prevY = tmp[0];
         
       	for (unsigned int k = 1; k < tmp.size(); k++) {
           resolution = tmp[k] - prevY;
@@ -377,7 +375,6 @@ bool NFmiNetCDF::ReadAttributes() {
 
   return true;
 }
-
 
         // Flatten 3D array to 1D array
 /*
@@ -516,14 +513,13 @@ long NFmiNetCDF::YIndex() {
 float NFmiNetCDF::X0() {
 
   if (itsX0 == kFloatMissing) {
-
     float min = kFloatMissing;
 
     vector<float> values = itsX.Values();
 
     for (unsigned int i=0; i < values.size(); i++) {
       if (min == kFloatMissing || values[i] < min)
-        min = values[0];
+        min = values[i];
     }
 
     itsX0 = min;
@@ -542,7 +538,7 @@ float NFmiNetCDF::Y0() {
 
     for (unsigned int i=0; i < values.size(); i++) {
       if (min == kFloatMissing || values[i] < min)
-        min = values[0];
+        min = values[i];
     }
 
     itsY0 = min;
@@ -680,7 +676,10 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
   if (!(theYDim = theOutFile.add_dim(itsYDim->name(), SizeY())))
     return false;
 
-  // Limit z dimension to one value
+  /*
+   * Add z dimension even if original data has no z dimension. In that
+   * case set level value = 0.
+   */
 
   if (!(theZDim = theOutFile.add_dim(itsZDim->name(), 1)))
     return false;
@@ -796,7 +795,15 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
       return false;
   }
 
+  /*
+   * Set z value. If current variable has no z dimension, Level() will return
+   * kFloatMissing. In that case we set level = 0.
+   */
+
   float zValue = Level();
+
+  if (zValue == kFloatMissing)
+    zValue = 0;
 
   if (!theZVar->put(&zValue, 1))
     return false;
@@ -869,7 +876,7 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
 
   // First level is one (not zero)
 
-  vector<float> data = Param().Values(TimeIndex(), LevelIndex());
+  vector<float> data = Values();
 
   if (!theParVar->put(&data[0], 1, 1, SizeX(), SizeY()))
     return false;

@@ -202,7 +202,13 @@ bool NFmiNetCDFVariable::NextValue() {
 }
 
 float NFmiNetCDFVariable::Value() {
-  return itsParam->as_float(itsValuePointer);
+
+  float ret = kFloatMissing;
+
+  if (itsValuePointer >= 0 && itsValuePointer < itsParam->num_vals())
+    ret = itsParam->as_float(itsValuePointer);
+
+  return ret;
 }
 
 long NFmiNetCDFVariable::Index() {
