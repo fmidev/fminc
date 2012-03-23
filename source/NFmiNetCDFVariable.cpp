@@ -1,5 +1,6 @@
 #include "NFmiNetCDFVariable.h"
 #include <boost/lexical_cast.hpp>
+#include <assert.h>
 
 using namespace std;
 
@@ -167,6 +168,9 @@ vector<float> NFmiNetCDFVariable::Values(long timeIndex, long levelIndex) {
   		  
     return values;
   }
+
+  assert(timeIndex != -1);
+  assert(levelIndex != -1);
 
   long xRec = 0;
   long yRec = 0;
