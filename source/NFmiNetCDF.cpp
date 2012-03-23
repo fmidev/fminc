@@ -475,6 +475,10 @@ long NFmiNetCDF::TimeIndex() {
   return itsT.Index();
 }
 
+string NFmiNetCDF::TimeUnit() {
+  return itsT.Unit();
+}
+
 long NFmiNetCDF::LevelIndex() {
   return itsZ.Index();
 }

@@ -37,6 +37,7 @@ class NFmiNetCDF {
     bool NextTime();
     float Time();
     long TimeIndex();
+    std::string TimeUnit();
 
     void ResetX();
     bool NextX();
