@@ -35,12 +35,7 @@ INCLUDES = -I include \
            -I$(includedir) \
            -I$(includedir)/netcdf-3
 
-LIBS =  -L$(libdir) \
-	-lboost_date_time \
-        -lboost_program_options \
-        -lboost_filesystem \
-        -lboost_system \
-        -lnetcdf_c++
+LIBS =  
 
 # Common library compiling template
 
@@ -132,12 +127,7 @@ clean:
 	rm -f $(libdir)/*.so $(libdir)/*.a $(OBJFILES) *~ source/*~ include/*~
 
 install:
-	mkdir -p $(bindir)
-	@list='$(LIB)'; \
-	for prog in $$list; do \
-	  echo $(INSTALL_LIB) $$prog $(bindir)/$$prog; \
-	  $(INSTALL_LIB) $$prog $(bindir)/$$prog; \
-	done
+	$(INSTALL_DATA) $(libdir)/lib$(LIB).a $(NEONS_LIB)
 
 depend:
 	gccmakedep -fDependencies -- $(CFLAGS) $(INCLUDES) -- $(ALLSRCS)
