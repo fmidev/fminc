@@ -57,6 +57,9 @@ NFmiNetCDF::NFmiNetCDF(const string &theInfile)
 
 
 NFmiNetCDF::~NFmiNetCDF() {
+  // should use probably std::shared_ptr
+
+  dataFile->close();
 }
 
 bool NFmiNetCDF::Read(const string &theInfile) {
@@ -288,31 +291,6 @@ bool NFmiNetCDF::ReadVariables() {
        * + offset, an arbitrary point of time in the past is chosen and all time is an offset
        * to that time.
        */
-/*
-      for (short k=0; k<var->num_atts(); k++) {
-        att = var->get_att(k);
-
-        if (static_cast<string> (att->name()) == "units")
-          itsTUnit = att->as_string(0);
-      }
-
-      if (itsTUnit.empty() || itsTUnit != "hours since 1900-01-01 00:00:00") {
-
-        return false;
-      }
-
-      for (unsigned short k = 0; k < var->num_vals(); k++) {
-
-        double t = var->as_double(k);
-
-        itsTimes.push_back(t);
-
-       // itsTimes.push_back(basehours.hours() - t);
-      }
-
-      if (itsTimes.size() > 1)
-        itsStep = itsTimes[1] - itsTimes[0];
-*/
 
       itsT.Init(var);
 
@@ -375,20 +353,6 @@ bool NFmiNetCDF::ReadAttributes() {
 
   return true;
 }
-
-        // Flatten 3D array to 1D array
-/*
-        for (unsigned int x = 0; x < itsX.Size(); x++) {
-          for (unsigned int y = 0; y < itsY.Size(); y++) {
-            float value = vals->as_float(j*(itsX.Size()*itsY.Size()) + y * itsX.Size() + x);
-
-            if (value == theMissingValue)
-              value = kFloatMissing;
-
-            slice.push_back(value);
-          }
-        }
-*/
   
 string NFmiNetCDF::AnalysisTime() {
   return itsAnalysisTime;
@@ -612,7 +576,7 @@ bool NFmiNetCDF::HasDimension(const NFmiNetCDFVariable &var, const string &dim) 
 
 bool NFmiNetCDF::WriteSliceToCSV(const string &theFileName) {
 	
-	ofstream theOutFile;
+  ofstream theOutFile;
   theOutFile.open(theFileName.c_str());
   
   vector<float> Xs = itsX.Values();
@@ -636,7 +600,7 @@ bool NFmiNetCDF::WriteSliceToCSV(const string &theFileName) {
   
   theOutFile.close();
 	
-	return true;
+  return true;
 }
 
 /*

@@ -42,7 +42,6 @@ bool NFmiNetCDFVariable::Init(NcVar *theVariable) {
 }
 
 NFmiNetCDFVariable::~NFmiNetCDFVariable() {
-  itsParam->sync();
 }
 
 string NFmiNetCDFVariable::Name() {
@@ -215,8 +214,6 @@ vector<float> NFmiNetCDFVariable::Values(long timeIndex, long levelIndex) {
 
   itsParam->set_cur(&c[0]);
 
-  //itsParam->set_cur(timeIndex, levelIndex, xRec, yRec);
-
   /*
    * Get values.
    *
@@ -225,17 +222,10 @@ vector<float> NFmiNetCDFVariable::Values(long timeIndex, long levelIndex) {
 
   values.resize(itsXDim->size()*itsYDim->size());
 
-  //itsParam->get(&values[0], 1, 1, itsXDim->size(), itsYDim->size());
   itsParam->get(&values[0], &d[0]);
 
   return values;
 }
-
-/*
-float NFmiNetCDFVariable::Value(int num) {
-  return itsParam->as_float(num);
-}
-*/
 
 bool NFmiNetCDFVariable::HasDimension(NcDim *dim) const {
   bool ret = false;
