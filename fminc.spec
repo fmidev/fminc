@@ -1,6 +1,6 @@
 %define LIBNAME fminc
 Summary: fminc library
-Name: %{LIBNAME}
+Name: lib%{LIBNAME}
 Version: 13.10.2
 Release: 1.el6.fmi
 License: FMI
@@ -38,7 +38,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,0644)
-%{_libdir}/lib%{LIBNAME}.so
+%{_libdir}/lib%{LIBNAME}.so.*
 %{_libdir}/lib%{LIBNAME}.a
 
 %changelog

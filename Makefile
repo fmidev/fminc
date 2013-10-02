@@ -18,10 +18,13 @@ DIFFICULTFLAGS = -pedantic -Weffc++ -Wredundant-decls -Wshadow -Woverloaded-virt
 
 CC = /usr/bin/g++
 
+MAJOR_VERSION=0
+MINOR_VERSION=0
+
 # Default compiler flags
 
 CFLAGS = -fPIC -std=c++0x -DUNIX -O2 -DNDEBUG $(MAINFLAGS) 
-LDFLAGS = -shared -Wl,-soname,libfminc.so.0.0
+LDFLAGS = -shared -Wl,-soname,lib$(LIB).so.$(MAJOR_VERSION)
 
 # Special modes
 
@@ -116,14 +119,14 @@ release: objdir $(LIB)
 
 $(LIB): $(OBJS)
 	ar rcs $(LIBDIR)/lib$(LIB).a $(OBJFILES)
-	$(CC) -o $(LIBDIR)/lib$(LIB).so $(LDFLAGS) $(OBJFILES)
+	$(CC) -o $(LIBDIR)/lib$(LIB).so.$(MAJOR_VERSION).$(MINOR_VERSION) $(LDFLAGS) $(OBJFILES)
 
 clean:
 	rm -f $(LIBDIR)/*.so $(LIBDIR)/*.a $(OBJFILES) *~ source/*~ include/*~
 
 install:
-	  mkdir -p $(libdir)
-	  $(INSTALL_DATA) lib/* $(libdir)
+	mkdir -p $(libdir)
+	$(INSTALL_DATA) lib/* $(libdir)
 	
 depend:
 	gccmakedep -fDependencies -- $(CFLAGS) $(INCLUDES) -- $(ALLSRCS)
@@ -134,11 +137,11 @@ objdir:
 
 rpm:    clean
 	mkdir -p $(rpmsourcedir) ; \
-        if [ -f $(LIB).spec ]; then \
-          tar -C .. --exclude .svn -cf $(rpmsourcedir)/$(LIB).tar $(LIB) ; \
-          gzip -f $(rpmsourcedir)/$(LIB).tar ; \
-          rpmbuild -ta $(rpmsourcedir)/$(LIB).tar.gz ; \
-          rm -f $(rpmsourcedir)/$(LIB).tar.gz ; \
+        if [ -e $(LIB).spec ]; then \
+          tar -C .. --exclude .svn -cf $(rpmsourcedir)/lib$(LIB).tar $(LIB) ; \
+          gzip -f $(rpmsourcedir)/lib$(LIB).tar ; \
+          rpmbuild -ta $(rpmsourcedir)/lib$(LIB).tar.gz ; \
+          rm -f $(rpmsourcedir)/lib$(LIB).tar.gz ; \
         else \
           echo $(rpmerr); \
         fi;
