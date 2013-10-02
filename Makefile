@@ -122,7 +122,7 @@ $(LIB): $(OBJS)
 	$(CC) -o $(LIBDIR)/lib$(LIB).so.$(MAJOR_VERSION).$(MINOR_VERSION) $(LDFLAGS) $(OBJFILES)
 
 clean:
-	rm -f $(LIBDIR)/*.so $(LIBDIR)/*.a $(OBJFILES) *~ source/*~ include/*~
+	rm -f $(LIBDIR)/*.so* $(LIBDIR)/*.a $(OBJFILES) *~ source/*~ include/*~
 
 install:
 	mkdir -p $(libdir)
