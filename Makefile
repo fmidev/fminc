@@ -20,16 +20,14 @@ CC = /usr/bin/g++
 
 # Default compiler flags
 
-CFLAGS = -DUNIX -O2 -DNDEBUG $(MAINFLAGS) 
-LDFLAGS = -s
+CFLAGS = -fPIC -std=c++0x -DUNIX -O2 -DNDEBUG $(MAINFLAGS) 
+LDFLAGS = -shared -Wl,-soname,libfminc.so.0.0
 
 # Special modes
 
-CFLAGS_DEBUG = -DUNIX -O0 -g -DDEBUG $(MAINFLAGS) $(EXTRAFLAGS)
-CFLAGS_PROFILE = -DUNIX -O2 -g -pg -DNDEBUG $(MAINFLAGS)
+CFLAGS_DEBUG = -fPIC -std=c++0x -DUNIX -O0 -g -DDEBUG $(MAINFLAGS) $(EXTRAFLAGS)
 
-LDFLAGS_DEBUG =
-LDFLAGS_PROFILE =
+LDFLAGS_DEBUG = $(LDFLAGS)
 
 INCLUDES = -I include \
            -I$(includedir) \
@@ -50,13 +48,13 @@ else
 endif
 
 ifeq ($(processor), x86_64)
-  libdir = $(PREFIX)/lib64
+  LIBDIR = $(PREFIX)/lib64
 else
-  libdir = $(PREFIX)/lib
+  LIBDIR = $(PREFIX)/lib
 endif
 
 objdir = obj
-libdir = lib
+LIBDIR = lib
 
 includedir = $(PREFIX)/include
 
@@ -76,11 +74,6 @@ BIN = $(shell basename $(CWP))
 ifneq (,$(findstring debug,$(MAKECMDGOALS)))
   CFLAGS = $(CFLAGS_DEBUG)
   LDFLAGS = $(LDFLAGS_DEBUG)
-endif
-
-ifneq (,$(findstring profile,$(MAKECMDGOALS)))
-  CFLAGS = $(CFLAGS_PROFILE)
-  LDFLAGS = $(LDFLAGS_PROFILE)
 endif
 
 # Compilation directories
@@ -113,29 +106,42 @@ ALLSRCS = $(wildcard *.cpp source/*.cpp)
 
 .PHONY: test rpm
 
+rpmsourcedir = /tmp/$(shell whoami)/rpmbuild
+
 # The rules
 
 all: objdir $(LIB)
 debug: objdir $(LIB)
 release: objdir $(LIB)
-profile: objdir $(LIB)
 
 $(LIB): $(OBJS)
-	ar rcs $(libdir)/lib$(LIB).a $(OBJFILES)
+	ar rcs $(LIBDIR)/lib$(LIB).a $(OBJFILES)
+	$(CC) -o $(LIBDIR)/lib$(LIB).so $(LDFLAGS) $(OBJFILES)
 
 clean:
-	rm -f $(libdir)/*.so $(libdir)/*.a $(OBJFILES) *~ source/*~ include/*~
+	rm -f $(LIBDIR)/*.so $(LIBDIR)/*.a $(OBJFILES) *~ source/*~ include/*~
 
 install:
-	$(INSTALL_DATA) $(libdir)/lib$(LIB).a $(NEONS_LIB)
-
+	  mkdir -p $(libdir)
+	  $(INSTALL_DATA) lib/* $(libdir)
+	
 depend:
 	gccmakedep -fDependencies -- $(CFLAGS) $(INCLUDES) -- $(ALLSRCS)
 
 objdir:
 	@mkdir -p $(objdir)
-	@mkdir -p $(libdir)
+	@mkdir -p $(LIBDIR)
 
+rpm:    clean
+	mkdir -p $(rpmsourcedir) ; \
+        if [ -f $(LIB).spec ]; then \
+          tar -C .. --exclude .svn -cf $(rpmsourcedir)/$(LIB).tar $(LIB) ; \
+          gzip -f $(rpmsourcedir)/$(LIB).tar ; \
+          rpmbuild -ta $(rpmsourcedir)/$(LIB).tar.gz ; \
+          rm -f $(rpmsourcedir)/$(LIB).tar.gz ; \
+        else \
+          echo $(rpmerr); \
+        fi;
 
 .SUFFIXES: $(SUFFIXES) .cpp
 
