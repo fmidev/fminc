@@ -126,11 +126,14 @@ clean:
 
 install:
 	mkdir -p $(libdir)
+	mkdir -p $(includedir)
+	@list=`cd include && ls -1 *.h`; \
+	for hdr in $$list; do \
+	  $(INSTALL_DATA) include/$$hdr $(includedir)/$$hdr; \
+	done
+
 	$(INSTALL_DATA) lib/* $(libdir)
 	
-depend:
-	gccmakedep -fDependencies -- $(CFLAGS) $(INCLUDES) -- $(ALLSRCS)
-
 objdir:
 	@mkdir -p $(objdir)
 	@mkdir -p $(LIBDIR)
