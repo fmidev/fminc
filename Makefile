@@ -36,6 +36,11 @@ INCLUDES = -I include \
            -I$(includedir) \
            -I$(includedir)/netcdf-3
 
+ifneq ($(INCLUDE), "")
+  INCLUDES := $(INCLUDES) \
+		$(INCLUDE)
+endif
+
 LIBS =  
 
 # Common library compiling template
