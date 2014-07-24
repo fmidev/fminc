@@ -134,7 +134,7 @@ bool NFmiNetCDF::ReadDimensions() {
       itsTDim = dim;
     }
 
-    if (name == "level" || name == "lev" || name == "depth") {
+    if (name == "level" || name == "lev" || name == "depth" || name == "pressure") {
       itsZDim = dim;
     }
   }
