@@ -7,17 +7,16 @@ using namespace std;
 #define kFloatMissing 32700.f
 
 NFmiNetCDFVariable::NFmiNetCDFVariable()
- : itsValuePointer(-1)
+ : itsValuePointer(-1),itsParam(0)
 {
 }
 
-NFmiNetCDFVariable::NFmiNetCDFVariable(NcVar *theParam) {
+NFmiNetCDFVariable::NFmiNetCDFVariable(NcVar *theParam) : itsValuePointer(-1),itsParam(0) {
   Init(theParam);
 }
 
 bool NFmiNetCDFVariable::Init(NcVar *theVariable) {
   itsParam = theVariable;
-
   for (unsigned short i = 0; i < itsParam->num_dims(); i++) {
     NcDim *dim = itsParam->get_dim(i);
 
@@ -32,13 +31,17 @@ bool NFmiNetCDFVariable::Init(NcVar *theVariable) {
     else if (name == "time" || name == "rec" || dim->is_unlimited())
       itsTDim = dim;
 
-    else if (name == "level" || name == "lev" || name == "depth")
+    else if (name == "level" || name == "lev" || name == "depth" || name == "height")
       itsZDim = dim;
 
     itsDims.push_back(dim);
   }
 
   return true;
+}
+
+bool NFmiNetCDFVariable::Initialized() {
+  return itsParam;
 }
 
 NFmiNetCDFVariable::~NFmiNetCDFVariable() {
@@ -101,7 +104,12 @@ void NFmiNetCDFVariable::Unit(string theUnit) {
 }
 
 long NFmiNetCDFVariable::Size() {
-  return itsParam->num_vals();
+  if (Initialized()){
+    return itsParam->num_vals();
+  }
+  else {
+    return 1;
+  }
 }
 
 string NFmiNetCDFVariable::Att(string attName) {

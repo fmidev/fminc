@@ -23,6 +23,7 @@ class NFmiNetCDFVariable {
 
     long Size();
     bool Init(NcVar *theVariable);
+    bool Initialized();
 
     std::vector<float> Values(long timeIndex = -1, long levelIndex = -1);
 

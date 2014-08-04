@@ -91,9 +91,12 @@ bool NFmiNetCDF::Read(const string &theInfile) {
   
   ResetTime();
   NextTime();
-  
+ 
   ResetLevel();
-  NextLevel();
+ 
+  if (itsZ.Initialized()) {
+    NextLevel();
+  }
 
   return true;
 }
@@ -119,7 +122,6 @@ bool NFmiNetCDF::ReadDimensions() {
     string name = dim->name();
 
     // NetCDF conventions suggest x coordinate to be named "lon"
-
     if (name == "x" || name == "X" || name == "lon" || name == "longitude") {
       itsXDim = dim;
     }
@@ -141,9 +143,9 @@ bool NFmiNetCDF::ReadDimensions() {
 
   // Level and time dimensions must be present
 
-  if (!itsZDim || !itsZDim->is_valid()) {
-    return false;
-  }
+//  if (!itsZDim || !itsZDim->is_valid()) {
+//    return false;
+//  }
 
   if (!itsTDim || !itsTDim->is_valid()) {
     return false;
@@ -160,7 +162,6 @@ bool NFmiNetCDF::ReadVariables() {
    * Each dimension in the file has a corresponding variable,
    * also each actual data parameter is presented as a variable.
    */
-
   for (int i = 0; i < dataFile->num_vars() ; i++) {
 
     NcVar *var = dataFile->get_var(i);
@@ -168,7 +169,7 @@ bool NFmiNetCDF::ReadVariables() {
 
     string name = var->name();
 
-    if (static_cast<string> (var->name()) == static_cast<string> (itsZDim->name())) {
+    if (itsZDim && static_cast<string> (var->name()) == static_cast<string> (itsZDim->name())) {
 
       /*
        * Assume level variable name equals to level dimension name. If it does not, how
@@ -203,7 +204,6 @@ bool NFmiNetCDF::ReadVariables() {
       continue;
     }
     else if (static_cast<string> (var->name()) == static_cast<string> (itsXDim->name())) {
-
       // X-coordinate
 
       itsX.Init(var);
@@ -558,7 +558,7 @@ bool NFmiNetCDF::HasDimension(const NFmiNetCDFVariable &var, const string &dim) 
 
   bool ret = false;
 
-  if (dim == "z") {
+  if (dim == "z" && itsZDim) {
     ret = var.HasDimension(itsZDim);
   }
   else if (dim == "t") {

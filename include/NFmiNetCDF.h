@@ -59,6 +59,7 @@ class NFmiNetCDF {
     void FirstParam();
     bool NextParam();
     NFmiNetCDFVariable Param();
+    NFmiNetCDFVariable LevelParam();
 
     float X0();
     float Y0();

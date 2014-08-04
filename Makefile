@@ -30,7 +30,7 @@ LDFLAGS = -shared -Wl,-soname,lib$(LIB).so.$(MAJOR_VERSION)
 
 CFLAGS_DEBUG = -fPIC -std=c++0x -DUNIX -O0 -g -DDEBUG $(MAINFLAGS) $(EXTRAFLAGS)
 
-LDFLAGS_DEBUG = $(LDFLAGS)
+LDFLAGS_DEBUG = -shared -Wl,-soname,lib$(LIB).so.$(MAJOR_VERSION)
 
 INCLUDES = -I include \
            -I$(includedir) \
