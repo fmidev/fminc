@@ -177,7 +177,7 @@ vector<float> NFmiNetCDFVariable::Values(long timeIndex, long levelIndex) {
   }
 
   assert(timeIndex != -1);
-  assert(levelIndex != -1);
+  // assert(levelIndex != -1);
 
   long xRec = 0;
   long yRec = 0;
@@ -199,7 +199,7 @@ vector<float> NFmiNetCDFVariable::Values(long timeIndex, long levelIndex) {
       d[i] = tDimSize;
       continue;
     }
-    else if (itsZDim->is_valid() && itsDims[i] == itsZDim) {
+    else if (itsZDim && itsZDim->is_valid() && itsDims[i] == itsZDim) {
       c[i] = levelIndex;
       d[i] = zDimSize;
       continue;

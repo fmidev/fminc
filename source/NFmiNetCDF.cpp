@@ -648,8 +648,15 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
    * Add z dimension even if original data has no z dimension. In that
    * case set level value = 0.
    */
+  string levelName;
+  if (!itsZDim){
+    levelName = "dummy_level";
+  }
+  else {
+    levelName = itsZDim->name();
+  }
 
-  if (!(theZDim = theOutFile.add_dim(itsZDim->name(), 1)))
+  if (!(theZDim = theOutFile.add_dim(levelName.c_str(), 1)))
     return false;
 
   // Our unlimited dimension
@@ -734,33 +741,34 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
     return false;
 
   // z
-
-  if (!(theZVar = theOutFile.add_var(itsZDim->name(), ncFloat, theZDim)))
+  if (!(theZVar = theOutFile.add_var(levelName.c_str(), ncFloat, theZDim)))
     return false;
-
-  if (!itsZ.Unit().empty()) {
-    if (!theZVar->add_att("units", itsZ.Unit().c_str()))
-      return false;
-  }
-
-  if (!itsZ.LongName().empty()) {
-    if (!theZVar->add_att("long_name", itsZ.LongName().c_str()))
-      return false;
-  }
-
-  if (!itsZ.StandardName().empty()) {
-    if (!theZVar->add_att("standard_name", itsZ.StandardName().c_str()))
+  
+  if (itsZDim){
+    if (!itsZ.Unit().empty()) {
+      if (!theZVar->add_att("units", itsZ.Unit().c_str()))
         return false;
-  }
+    }
 
-  if (!itsZ.Axis().empty()) {
-    if (!theZVar->add_att("axis", itsZ.Axis().c_str()))
-      return false;
-  }
+    if (!itsZ.LongName().empty()) {
+      if (!theZVar->add_att("long_name", itsZ.LongName().c_str()))
+        return false;
+    }
 
-  if (!itsZ.Positive().empty()) {
-    if (!theZVar->add_att("positive", itsZ.Positive().c_str()))
-      return false;
+    if (!itsZ.StandardName().empty()) {
+      if (!theZVar->add_att("standard_name", itsZ.StandardName().c_str()))
+          return false;
+    }
+
+    if (!itsZ.Axis().empty()) {
+      if (!theZVar->add_att("axis", itsZ.Axis().c_str()))
+        return false;
+    }
+
+    if (!itsZ.Positive().empty()) {
+      if (!theZVar->add_att("positive", itsZ.Positive().c_str()))
+        return false;
+    }
   }
 
   /*
