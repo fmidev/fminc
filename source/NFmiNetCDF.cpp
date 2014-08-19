@@ -646,11 +646,13 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
 
   /*
    * Add z dimension even if original data has no z dimension. In that
-   * case set level value = 0.
+   * case set level type = height and value = 0.
    */
+
   string levelName;
+
   if (!itsZDim){
-    levelName = "dummy_level";
+    levelName = "height";
   }
   else {
     levelName = itsZDim->name();
