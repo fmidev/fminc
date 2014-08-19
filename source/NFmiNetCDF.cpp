@@ -136,16 +136,10 @@ bool NFmiNetCDF::ReadDimensions() {
       itsTDim = dim;
     }
 
-    if (name == "level" || name == "lev" || name == "depth" || name == "pressure") {
+    if (name == "level" || name == "lev" || name == "depth" || name == "pressure" || name == "height") {
       itsZDim = dim;
     }
   }
-
-  // Level and time dimensions must be present
-
-//  if (!itsZDim || !itsZDim->is_valid()) {
-//    return false;
-//  }
 
   if (!itsTDim || !itsTDim->is_valid()) {
     return false;
