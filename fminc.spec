@@ -1,7 +1,7 @@
 %define LIBNAME fminc
 Summary: fminc library
 Name: lib%{LIBNAME}
-Version: 13.10.8
+Version: 14.8.11
 Release: 1.el6.fmi
 License: FMI
 Group: Development/Tools
@@ -53,6 +53,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/*.h
 
 %changelog
+* Mon Aug 11 2014 Andreas Tack <andreas.tack@fmi.fi> - 14.8.11-1.fmi
+- Additional fixes for z-dimension handling
+* Mon Aug  4 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.4-1.fmi
+- Fixes on z-dimension handling (UKMO data)
 * Tue Oct  8 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.8-1.el6.fmi
 - Separating devel-package
 * Tue Oct  2 2013 Mikko Partio <mikko.partio@fmi.fi> - 13.10.2-1.el6.fmi
