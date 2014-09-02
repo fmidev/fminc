@@ -1,7 +1,7 @@
 %define LIBNAME fminc
 Summary: fminc library
 Name: lib%{LIBNAME}
-Version: 14.8.11
+Version: 14.9.2
 Release: 1.el6.fmi
 License: FMI
 Group: Development/Tools
@@ -53,6 +53,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/*.h
 
 %changelog
+* Tue Sep  2 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.2-1.fmi
+- WriteSlice() uses same dimension ordering as source data
+* Tue Aug 19 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.19-1.fmi
+- Adding height/0 as default level if no level is defined
 * Mon Aug 11 2014 Andreas Tack <andreas.tack@fmi.fi> - 14.8.11-1.fmi
 - Additional fixes for z-dimension handling
 * Mon Aug  4 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.8.4-1.fmi
