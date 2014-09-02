@@ -186,6 +186,7 @@ vector<float> NFmiNetCDFVariable::Values(long timeIndex, long levelIndex) {
 	else if (itsZDim && itsZDim->is_valid() && dimname == itsZDim->name())
 	{
 		index = levelIndex;
+		dimsize = 1;
 	}
 
 	cursor_position[i] = index;
