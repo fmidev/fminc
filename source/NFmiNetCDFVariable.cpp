@@ -7,11 +7,11 @@ using namespace std;
 #define kFloatMissing 32700.f
 
 NFmiNetCDFVariable::NFmiNetCDFVariable()
- : itsValuePointer(-1),itsParam(0)
+ : itsValuePointer(-1), itsParam(0), itsTDim(0), itsZDim(0), itsXDim(0), itsYDim(0)
 {
 }
 
-NFmiNetCDFVariable::NFmiNetCDFVariable(NcVar *theParam) : itsValuePointer(-1),itsParam(0) {
+NFmiNetCDFVariable::NFmiNetCDFVariable(NcVar *theParam) : itsValuePointer(-1),itsParam(0), itsTDim(0), itsZDim(0), itsXDim(0), itsYDim(0) {
   Init(theParam);
 }
 
@@ -34,7 +34,6 @@ bool NFmiNetCDFVariable::Init(NcVar *theVariable) {
     else if (name == "level" || name == "lev" || name == "depth" || name == "height")
       itsZDim = dim;
 
-    itsDims.push_back(dim);
   }
 
   return true;
@@ -136,11 +135,6 @@ string NFmiNetCDFVariable::Att(string attName) {
 vector<float> NFmiNetCDFVariable::Values(long timeIndex, long levelIndex) {
 
   vector<float> values;
-  vector<long> c;
-  vector<long> d;
-
-  long tDimSize = 1;
-  long zDimSize = 1;
 
   // Get ALL data
 
@@ -150,88 +144,84 @@ vector<float> NFmiNetCDFVariable::Values(long timeIndex, long levelIndex) {
   	
   	// Support only for one-dimension and four-dimension parameters
 
-  	if (itsDims.size() == 1) {
+	assert(itsParam->num_dims() == 1);
+
+  	if (itsParam->num_dims() == 1) {
   	  itsParam->get(&values[0], Size());
   	}
-  	else {
-
-  	  itsParam->set_cur(0, 0, 0, 0);
-
-  	  vector<long> c;
-
-  	  c.resize(itsDims.size()-2);
-
-      for (unsigned short i = 0; i < itsDims.size(); i++) {
-        if (itsDims[i] == itsTDim || itsDims[i] == itsZDim) {
-          d[i] = 1;
-          continue;
-        }
-
-        d[i] = itsDims[i]->size();
-      }
-
-  	  itsParam->get(&values[0], &d[0]);
-  	}
-  		  
+	
     return values;
   }
 
   assert(timeIndex != -1);
-  // assert(levelIndex != -1);
-
-  long xRec = 0;
-  long yRec = 0;
-
-  // Hard-coded order of dimensions: time, level, x, y
 
   /*
-   * Set cursor to correct place. We need to have correct dimension value AND
-   * correct ordering of dimensions.
+   * First set cursor to correct place.
+   * We need to have correct dimension sizes AND correct ordering of dimensions.
+   * This means that time dimension and level dimension are taken from timeIndex
+   * and levelIndex, and x & y dimension are full sizes since we take the
+   * whole "slice".
    */
 
-  c.resize(itsDims.size());
-  d.resize(itsDims.size());
+  long num_dims = itsParam->num_dims();
+  
+  vector<long> cursor_position(num_dims), dimsizes(num_dims);
 
-  for (unsigned short i = 0; i < itsDims.size(); i++) {
+  cursor_position.resize(num_dims);
+  dimsizes.resize(num_dims);
 
-    if (itsDims[i] == itsTDim) {// || itsDims[i] == itsZDim) {
-      c[i] = timeIndex;
-      d[i] = tDimSize;
-      continue;
-    }
-    else if (itsZDim && itsZDim->is_valid() && itsDims[i] == itsZDim) {
-      c[i] = levelIndex;
-      d[i] = zDimSize;
-      continue;
-    }
-    else if (itsDims[i] == itsXDim) {
-      c[i] = xRec;
-      d[i] = itsDims[i]->size();
-      continue;
-    }
-    else if (itsDims[i] == itsYDim) {
-      c[i] = yRec;
-      d[i] = itsDims[i]->size();
-      continue;
-    }
-    else {
-      cerr << "Invalid dimension: " << itsDims[i]->name() << endl;
-      return values;
-    }
+  for (unsigned short i = 0; i < num_dims; i++) {
+    NcDim *dim = itsParam->get_dim(i);
+
+    string dimname = static_cast<string> (dim->name());
+
+	long index = 0;
+	long dimsize = dim->size();
+
+	if (dimname == itsTDim->name())
+	{
+		index = timeIndex;
+		dimsize = 1;
+	}
+	else if (itsZDim && itsZDim->is_valid() && dimname == itsZDim->name())
+	{
+		index = levelIndex;
+	}
+
+	cursor_position[i] = index;
+	dimsizes[i] = dimsize;
   }
 
-  itsParam->set_cur(&c[0]);
+
+  itsParam->set_cur(&cursor_position[0]);
 
   /*
    * Get values.
    *
-   * We always get only one slice, ie data from one time, one level and one x*y-area.
+   * 
    */
 
   values.resize(itsXDim->size()*itsYDim->size());
 
-  itsParam->get(&values[0], &d[0]);
+#ifdef DEBUG
+  for (size_t i = 0; i < cursor_position.size(); i++) cout << "cursor position " << i << ": " << cursor_position[i] << endl;
+  for (size_t i = 0; i < dimsizes.size(); i++) cout << "dimension sizes " << i << ": " << dimsizes[i] << endl;
+#endif
+  
+  itsParam->get(&values[0], &dimsizes[0]);
 
+#ifdef DEBUG
+  double min=1e38, max=-1e38, sum=0;
+  long count = 0;
+  for (size_t i = 0; i < values.size(); i++)
+  {
+	  if (values[i] < min) min = values[i];
+	  if (values[i] > max) max = values[i];
+	  sum += values[i];
+	  count++;
+  }
+  cout << "min: " << min << " max: " << max << " mean: " << (sum/static_cast<double>(count)) << endl;
+#endif
   return values;
 }
 
@@ -274,3 +264,12 @@ void NFmiNetCDFVariable::Index(long theValuePointer) {
   itsValuePointer = theValuePointer;
 }
 
+NcDim* NFmiNetCDFVariable::Dimension(int num)
+{
+  return itsParam->get_dim(num);
+}
+
+int NFmiNetCDFVariable::SizeDimensions()
+{
+	return itsParam->num_dims();
+}

@@ -35,13 +35,15 @@ class NFmiNetCDFVariable {
     long Index();
     void Index(long theValuePointer);
 
+	NcDim* Dimension(int num);
+	int SizeDimensions();
+	
   private:
 
     std::string Att(std::string attName);
     long itsValuePointer;
     NcVar *itsParam;
-    std::vector<NcDim *> itsDims;
-
+   
     NcDim *itsTDim;
     NcDim *itsZDim;
     NcDim *itsXDim;

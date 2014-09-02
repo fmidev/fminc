@@ -22,9 +22,6 @@ NFmiNetCDF::NFmiNetCDF()
  , itsYDim(0)
  , itsZDim(0)
  , itsProjection("latitude_longitude")
- , itsProcess(0)
- , itsCentre(86)
- , itsAnalysisTime("")
  , itsX0(kFloatMissing)
  , itsY0(kFloatMissing)
  , itsStep(0)
@@ -41,9 +38,6 @@ NFmiNetCDF::NFmiNetCDF(const string &theInfile)
  , itsYDim(0)
  , itsZDim(0)
  , itsProjection("latitude_longitude")
- , itsProcess(0)
- , itsCentre(86)
- , itsAnalysisTime("")
  , itsX0(kFloatMissing)
  , itsY0(kFloatMissing)
  , itsStep(0)
@@ -161,9 +155,9 @@ bool NFmiNetCDF::ReadVariables() {
     NcVar *var = dataFile->get_var(i);
     NcAtt *att;
 
-    string name = var->name();
+    string varname = var->name();
 
-    if (itsZDim && static_cast<string> (var->name()) == static_cast<string> (itsZDim->name())) {
+    if (itsZDim && varname == static_cast<string> (itsZDim->name())) {
 
       /*
        * Assume level variable name equals to level dimension name. If it does not, how
@@ -177,27 +171,9 @@ bool NFmiNetCDF::ReadVariables() {
 
       itsZ.Init(var);
 
-      // Check for attributes
-
-      for (unsigned short k = 0; k< var->num_atts(); k++) {
-        att = var->get_att(k);
-
-        string name = static_cast<string> (att->name());
-
-        if (name == "positive") {
-          if (static_cast<string> (att->as_string(0)) == "down") {
-            itsZIsPositive = false;
-          } else {
-            itsZIsPositive = true;
-          }
-        } else if (name == "units") {
-          itsZUnit = att->as_string(0);
-        }
-      }
-
       continue;
     }
-    else if (static_cast<string> (var->name()) == static_cast<string> (itsXDim->name())) {
+    else if (varname == static_cast<string> (itsXDim->name())) {
       // X-coordinate
 
       itsX.Init(var);
@@ -236,7 +212,7 @@ bool NFmiNetCDF::ReadVariables() {
       
       continue;
     }
-    else if (static_cast<string> (var->name()) == static_cast<string> (itsYDim->name())) {
+    else if (varname == static_cast<string> (itsYDim->name())) {
 
       // Y-coordinate
 
@@ -276,7 +252,7 @@ bool NFmiNetCDF::ReadVariables() {
       
       continue;
     }
-    else if (static_cast<string> (var->name()) == static_cast<string> (itsTDim->name())) {
+    else if (varname == static_cast<string> (itsTDim->name())) {
 
       /*
        * time
@@ -334,40 +310,17 @@ bool NFmiNetCDF::ReadAttributes() {
 
     string name = att->name();
 
-    if (itsProcess != 0 && name == "producer" && att->type() == ncInt) {
-      itsProcess = static_cast<unsigned int> (att->as_long(0));
-    }
-    else if (name == "Conventions" && att->type() == ncChar) {
+    if (name == "Conventions" && att->type() == ncChar) {
       itsConvention = att->as_string(0);
-    }
-    else if (!itsAnalysisTime.empty() && name == "AnalysisTime" && att->type() == ncChar) {
-      itsAnalysisTime = att->as_string(0);
     }
   }
 
   return true;
 }
   
-string NFmiNetCDF::AnalysisTime() {
-  return itsAnalysisTime;
-}
-
-void NFmiNetCDF::AnalysisTime(string theAnalysisTime) {
-  itsAnalysisTime = theAnalysisTime;
-}
-
-
-unsigned int NFmiNetCDF::Process() {
-  return itsProcess;
-}
-
-void NFmiNetCDF::Process(unsigned int theProcess) {
-  itsProcess = theProcess;
-}
-
 long int NFmiNetCDF::SizeX() {
-  return itsX.Size();
-}
+  return itsX.Size();}
+
 
 long int NFmiNetCDF::SizeY() {
   return itsY.Size();
@@ -401,7 +354,7 @@ bool NFmiNetCDF::NextParam() {
   return (++itsParamIterator < itsParameters.end());
 }
 
-NFmiNetCDFVariable NFmiNetCDF::Param() {
+NFmiNetCDFVariable& NFmiNetCDF::Param() {
   return *itsParamIterator;
 }
 
@@ -610,8 +563,8 @@ bool NFmiNetCDF::WriteSliceToCSV(const string &theFileName) {
 
 bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
 
-  NcDim *theXDim, *theYDim, *theZDim, *theTDim;
-  NcVar *theXVar, *theYVar, *theZVar, *theTVar, *theParVar;
+  NcDim *theXDim = 0, *theYDim = 0, *theZDim = 0, *theTDim = 0;
+  NcVar *theXVar = 0, *theYVar = 0, *theZVar = 0, *theTVar = 0, *theParVar = 0;
 
   boost::filesystem::path f(theFileName);
   string dir  = f.parent_path().string();
@@ -639,22 +592,14 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
     return false;
 
   /*
-   * Add z dimension even if original data has no z dimension. In that
-   * case set level type = height and value = 0.
+   * Add z dimension if it exists in the original data
    */
 
-  string levelName;
-
-  if (!itsZDim){
-    levelName = "height";
+  if (itsZDim)
+  {
+	if (!(theZDim = theOutFile.add_dim(itsZDim->name(), 1)))
+      return false;
   }
-  else {
-    levelName = itsZDim->name();
-  }
-
-  if (!(theZDim = theOutFile.add_dim(levelName.c_str(), 1)))
-    return false;
-
   // Our unlimited dimension
 
   if (!(theTDim = theOutFile.add_dim(itsTDim->name())))
@@ -737,11 +682,14 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
     return false;
 
   // z
-  if (!(theZVar = theOutFile.add_var(levelName.c_str(), ncFloat, theZDim)))
-    return false;
-  
-  if (itsZDim){
-    if (!itsZ.Unit().empty()) {
+  if (theZDim)
+  {
+    if (!(theZVar = theOutFile.add_var(theZDim->name(), ncFloat, theZDim)))
+	{
+      return false;
+    }
+
+	if (!itsZ.Unit().empty()) {
       if (!theZVar->add_att("units", itsZ.Unit().c_str()))
         return false;
     }
@@ -765,20 +713,21 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
       if (!theZVar->add_att("positive", itsZ.Positive().c_str()))
         return false;
     }
+
+	float zValue = Level();
+
+    if (zValue == kFloatMissing)
+      zValue = 0;
+
+    if (!theZVar->put(&zValue, 1))
+      return false;
+
   }
 
   /*
    * Set z value. If current variable has no z dimension, Level() will return
    * kFloatMissing. In that case we set level = 0.
    */
-
-  float zValue = Level();
-
-  if (zValue == kFloatMissing)
-    zValue = 0;
-
-  if (!theZVar->put(&zValue, 1))
-    return false;
 
   // t
 
@@ -812,14 +761,49 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
 
   // parameter
 
-  // TODO: Check which dimensions are actually defined for a variable and their ordering
+  // Add dimensions to parameter. Note! Order must be the same!
 
-  if (!(theParVar = theOutFile.add_var(Param().Name().c_str(), ncFloat, theTDim, theZDim, theXDim, theYDim)))
+  int num_dims = Param().SizeDimensions();
+
+  vector<NcDim*> dims(num_dims);
+  vector<long> cursor_position(num_dims);
+
+  for (int i = 0; i < num_dims; i++)
+  {
+    string dimname = Param().Dimension(i)->name();
+
+	if (dimname == itsTDim->name())
+	{
+		dims[i] = theTDim;
+		cursor_position[i] = 1;
+	}
+	else if (theZDim && dimname == itsZDim->name())
+	{
+		dims[i] = theZDim;
+		cursor_position[i] = 1;
+	}
+	else if (dimname == itsXDim->name())
+	{
+		dims[i] = theXDim;
+		cursor_position[i] = itsXDim->size();
+	}
+	else if (dimname == itsYDim->name())
+	{
+		dims[i] = theYDim;
+		cursor_position[i] = itsYDim->size();
+	}
+  }
+
+  if (!(theParVar = theOutFile.add_var(Param().Name().c_str(), ncFloat, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
+  {
     return false;
+  }
 
   if (!Param().Unit().empty()) {
     if (!theParVar->add_att("units", Param().Unit().c_str()))
+    {
       return false;
+    }
   }
 
   if (!Param().LongName().empty()) {
@@ -840,23 +824,24 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
   // Fill value should be the same as missing value
 
   if ((Param().FillValue() == Param().MissingValue()) != kFloatMissing) {
-    if (!theParVar->add_att("_FillValue", Param().FillValue()))
+    if (!theParVar->add_att("_FillValue", Param().FillValue())) {
         return false;
-    if (!theParVar->add_att("missing_value", Param().MissingValue()))
+    }
+    if (!theParVar->add_att("missing_value", Param().MissingValue())) {
       return false;
+    }
   }
 
   // First level is one (not zero)
 
   vector<float> data = Values();
 
-  if (!theParVar->put(&data[0], 1, 1, SizeX(), SizeY()))
+  if (!theParVar->put(&data[0], &cursor_position[0]))
+  {
     return false;
+  }
 
   // Global attributes
-
-  if (!theOutFile.add_att("generating_process_identifier", static_cast<long> (itsProcess)))
-    return false;
 
   if (!itsConvention.empty()) {
     if (!theOutFile.add_att("Conventions", itsConvention.c_str()))
@@ -881,9 +866,6 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
   }
 
   if (!theOutFile.add_att("distributor", "Finnish Meteorological Institute"))
-    return false;
-
-  if (!theOutFile.add_att("analysis_time", itsAnalysisTime.c_str()))
     return false;
 
   theOutFile.sync();

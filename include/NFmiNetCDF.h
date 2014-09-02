@@ -18,9 +18,6 @@ class NFmiNetCDF {
 
     bool Read(const std::string &theInfile);
 
-    std::string AnalysisTime();
-    void AnalysisTime(std::string theAnalysisTime);
-
     unsigned int Process();
     void Process(unsigned int theProcess);
 
@@ -58,8 +55,7 @@ class NFmiNetCDF {
 
     void FirstParam();
     bool NextParam();
-    NFmiNetCDFVariable Param();
-    NFmiNetCDFVariable LevelParam();
+    NFmiNetCDFVariable& Param();
 
     float X0();
     float Y0();
@@ -103,7 +99,6 @@ class NFmiNetCDF {
     std::string itsConvention;
     std::string itsProjection;
     std::string itsInstitution;
-    unsigned int itsProcess;
 
     std::vector<NFmiNetCDFVariable> itsParameters;
     NFmiNetCDFVariable itsZ;
@@ -114,12 +109,6 @@ class NFmiNetCDF {
     std::vector<NFmiNetCDFVariable>::iterator itsParamIterator;
 
     bool itsZIsPositive;
-
-    std::string itsZUnit;
-    std::string itsTUnit;
-
-    long itsCentre;
-    std::string itsAnalysisTime;
 
     /* Support only squares */
 
