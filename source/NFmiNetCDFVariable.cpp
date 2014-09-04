@@ -272,5 +272,26 @@ NcDim* NFmiNetCDFVariable::Dimension(int num)
 
 int NFmiNetCDFVariable::SizeDimensions()
 {
-	return itsParam->num_dims();
+  return itsParam->num_dims();
 }
+
+bool NFmiNetCDFVariable::CoordinatesInRowMajorOrder()
+{
+  int num_dims = SizeDimensions();
+
+  int xCoordNum = -1, yCoordNum = -1;
+
+  for (int i = 0; i < num_dims; i++) {
+    string dimname = itsParam->get_dim(i)->name();
+    if (dimname == string(itsXDim->name())) {
+      xCoordNum = i;
+    }    
+    else if (dimname == string(itsYDim->name())) {
+      yCoordNum = i;
+    }
+  }
+  assert(xCoordNum != yCoordNum);
+
+  return (xCoordNum > yCoordNum);
+}
+

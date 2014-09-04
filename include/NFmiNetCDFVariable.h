@@ -35,9 +35,21 @@ class NFmiNetCDFVariable {
     long Index();
     void Index(long theValuePointer);
 
-	NcDim* Dimension(int num);
-	int SizeDimensions();
-	
+    NcDim* Dimension(int num);
+    int SizeDimensions();
+
+    /*
+     * In netcdf we might have coordinate dimensions for a variable either in order
+     * longitude,latitude
+     * OR
+     * latitude, longitude
+     *
+     * The former is column major style (fortran), and the latter is row major style (c).
+     * The column major data must be transposed before it can be stored to a c-array.
+     * (This function does not do the transpose)
+     */
+ 
+    bool CoordinatesInRowMajorOrder();
   private:
 
     std::string Att(std::string attName);
