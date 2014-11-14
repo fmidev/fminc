@@ -2,7 +2,7 @@
 Summary: fminc library
 Name: lib%{LIBNAME}
 Version: 14.9.4
-Release: 1.el6.fmi
+Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -10,6 +10,7 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Provides: %{LIBNAME}
 BuildRequires: netcdf-devel >= 4.1.1
+BuildRequires: netcdf-cxx-devel
 
 %description
 FMI netcdf library
