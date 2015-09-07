@@ -18,19 +18,16 @@ DIFFICULTFLAGS = -pedantic -Weffc++ -Wredundant-decls -Wshadow -Woverloaded-virt
 
 CC = /usr/bin/g++
 
-MAJOR_VERSION=0
-MINOR_VERSION=0
-
 # Default compiler flags
 
 CFLAGS = -fPIC -std=c++0x -DUNIX -O2 -DNDEBUG $(MAINFLAGS) 
-LDFLAGS = -shared -Wl,-soname,lib$(LIB).so.$(MAJOR_VERSION)
+LDFLAGS = -shared -Wl,-soname,lib$(LIB).so
 
 # Special modes
 
 CFLAGS_DEBUG = -fPIC -std=c++0x -DUNIX -O0 -g -DDEBUG $(MAINFLAGS) $(EXTRAFLAGS)
 
-LDFLAGS_DEBUG = -shared -Wl,-soname,lib$(LIB).so.$(MAJOR_VERSION)
+LDFLAGS_DEBUG = -shared -Wl,-soname,lib$(LIB).so
 
 INCLUDES = -I include \
            -I$(includedir) \
@@ -124,7 +121,7 @@ release: objdir $(LIB)
 
 $(LIB): $(OBJS)
 	ar rcs $(LIBDIR)/lib$(LIB).a $(OBJFILES)
-	$(CC) -o $(LIBDIR)/lib$(LIB).so.$(MAJOR_VERSION).$(MINOR_VERSION) $(LDFLAGS) $(OBJFILES)
+	$(CC) -o $(LIBDIR)/lib$(LIB).so $(LDFLAGS) $(OBJFILES)
 
 clean:
 	rm -f $(LIBDIR)/*.so* $(LIBDIR)/*.a $(OBJFILES) *~ source/*~ include/*~

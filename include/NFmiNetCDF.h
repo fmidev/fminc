@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 #include <netcdfcpp.h>
-#include "NFmiNetCDFVariable.h"
+#include <memory>
 
 class NFmiNetCDF {
 
@@ -36,16 +36,6 @@ class NFmiNetCDF {
     long TimeIndex();
     std::string TimeUnit();
 
-    void ResetX();
-    bool NextX();
-    float X();
-    long XIndex();
-    
-    void ResetY();
-    bool NextY();
-    float Y();
-    long YIndex();
-
     void ResetLevel();
     bool NextLevel();
     float Level();
@@ -55,10 +45,12 @@ class NFmiNetCDF {
 
     void FirstParam();
     bool NextParam();
-    NFmiNetCDFVariable& Param();
+    NcVar* Param();
 
     float X0();
     float Y0();
+
+	float Orientation();
 
     float ValueT(long num);
     float ValueZ(long num);
@@ -66,8 +58,6 @@ class NFmiNetCDF {
     std::string Projection();
     std::vector<float> Values(std::string theParameter);
     std::vector<float> Values();
-
-    bool HasDimension(const NFmiNetCDFVariable &var, const std::string &dim);
 
     bool WriteSlice(const std::string &theFileName);
     bool WriteSliceToCSV(const std::string &theFileName);
@@ -81,7 +71,19 @@ class NFmiNetCDF {
     float XResolution();
     float YResolution();
 
+	NcVar* GetVariable(const std::string& varName);
+    bool CoordinatesInRowMajorOrder(const NcVar* var);
+
+	bool HasDimension(const std::string& dimName);
+    std::string Att(const std::string& attName);
+
   private:
+
+    bool HasDimension(const NcVar* var, const std::string &dim);
+    std::string Att(NcVar* var, const std::string& attName);
+
+    std::vector<float> Values(NcVar* var);
+    std::vector<float> Values(NcVar* var, long timeIndex, long levelIndex = -1);
 
     bool ReadDimensions();
     bool ReadVariables();
@@ -94,35 +96,23 @@ class NFmiNetCDF {
     NcDim *itsYDim;
     NcDim *itsZDim;
 
-    NcFile *dataFile;
+    std::unique_ptr<NcFile> itsDataFile;
 
     std::string itsConvention;
     std::string itsProjection;
     std::string itsInstitution;
 
-    std::vector<NFmiNetCDFVariable> itsParameters;
-    NFmiNetCDFVariable itsZ;
-    NFmiNetCDFVariable itsX;
-    NFmiNetCDFVariable itsY;
-    NFmiNetCDFVariable itsT;
-
-    std::vector<NFmiNetCDFVariable>::iterator itsParamIterator;
-
-    bool itsZIsPositive;
-
-    /* Support only squares */
-
-    float itsX0;
-    float itsX1;
-    float itsY0;
-    float itsY1;
-
-    short itsStep; // minutes
+    std::vector<NcVar*> itsParameters;
+	std::vector<NcVar*>::iterator itsParamIterator;
+    NcVar* itsZVar;
+    NcVar* itsXVar;
+    NcVar* itsYVar;
+    NcVar* itsTVar;
 
     bool itsXFlip;
     bool itsYFlip;
     
-    float itsXResolution;
-    float itsYResolution;
-
+	long itsParamIndex;
+	long itsTimeIndex;
+	long itsLevelIndex;
 };
