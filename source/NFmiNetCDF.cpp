@@ -1,5 +1,4 @@
 #include "NFmiNetCDF.h"
-#include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
 #include <stdexcept>
 #include <sstream>
@@ -38,13 +37,15 @@ std::string NFmiNetCDF::Att(NcVar* var, const std::string& attName)
 
 }
 
-vector<float> NFmiNetCDF::Values(NcVar* var) {
-  vector<float> values(var->num_vals(), kFloatMissing);
+template <typename T>
+vector<T> NFmiNetCDF::Values(NcVar* var) {
+  vector<T> values(var->num_vals(), kFloatMissing);
   var->get(&values[0], var->num_vals());
   return values;
 }
 
-vector<float> NFmiNetCDF::Values(NcVar* var, long timeIndex, long levelIndex) {
+template <typename T>
+vector<T> NFmiNetCDF::Values(NcVar* var, long timeIndex, long levelIndex) {
   
   long num_dims = var->num_dims();
   
@@ -74,7 +75,7 @@ vector<float> NFmiNetCDF::Values(NcVar* var, long timeIndex, long levelIndex) {
 
   var->set_cur(&cursor_position[0]);
 
-  vector<float> values(itsXDim->size()*itsYDim->size(), kFloatMissing);
+  vector<T> values(itsXDim->size()*itsYDim->size(), kFloatMissing);
   var->get(&values[0], &dimsizes[0]);
   
   return values;
@@ -234,7 +235,7 @@ bool NFmiNetCDF::ReadVariables() {
 
       itsXVar = var;
 
-      vector<float> tmp = Values(itsXVar);
+      auto tmp = Values<float>(itsXVar);
 
       if (itsXFlip)
         reverse(tmp.begin(), tmp.end());
@@ -244,7 +245,7 @@ bool NFmiNetCDF::ReadVariables() {
         // Check resolution 
         
         float resolution = 0;
-        float prevResolution = 0;
+        float prevResolution = resolution;
         
         float prevX = tmp[0];
         
@@ -272,7 +273,7 @@ bool NFmiNetCDF::ReadVariables() {
 
       itsYVar = var;
 
-      vector<float> tmp = Values(itsYVar);
+      auto tmp = Values<float>(itsYVar);
 
       if (itsYFlip)
         reverse(tmp.begin(), tmp.end());
@@ -282,7 +283,7 @@ bool NFmiNetCDF::ReadVariables() {
         // Check resolution 
         
         float resolution = 0;
-        float prevResolution = 0;
+        float prevResolution = resolution;
         
         float prevY = tmp[0];
         
@@ -429,13 +430,20 @@ bool NFmiNetCDF::NextTime() {
   return false;
 }
 
-float NFmiNetCDF::Time() {
-  float val = kFloatMissing;
-  if (itsTVar) {
-    val = itsTVar->as_float(itsTimeIndex);  
-  }
+template <typename T>
+T NFmiNetCDF::Time() {
+  T val = kFloatMissing;
+
+  itsTVar->set_cur(&itsTimeIndex);
+  itsTVar->get(&val,1);
+
   return val;
 }
+
+template float NFmiNetCDF::Time<float>();
+template double NFmiNetCDF::Time<double>();
+template int NFmiNetCDF::Time<int>();
+template short NFmiNetCDF::Time<short>();
 
 void NFmiNetCDF::ResetLevel() {
   itsLevelIndex = -1;
@@ -470,9 +478,9 @@ long NFmiNetCDF::LevelIndex() {
   return itsLevelIndex;
 }
 
-
-float NFmiNetCDF::X0() {
-  float ret = kFloatMissing;
+template <typename T>
+T NFmiNetCDF::X0() {
+  T ret = kFloatMissing;
   
   if (Projection() == "polar_stereographic") {
     auto lonVar = itsDataFile->get_var("longitude");
@@ -480,9 +488,9 @@ float NFmiNetCDF::X0() {
   }
   else {
 
-    float min = kFloatMissing;
+    T min = kFloatMissing;
 
-    vector<float> values = Values(itsXVar);
+    auto values = Values<T>(itsXVar);
 
     for (unsigned int i=0; i < values.size(); i++) {
       if (min == kFloatMissing || values[i] < min) min = values[i];
@@ -494,8 +502,11 @@ float NFmiNetCDF::X0() {
   return ret;
 }
 
-float NFmiNetCDF::Y0() {
-  float ret = kFloatMissing;
+template float NFmiNetCDF::X0<float>();
+
+template <typename T>
+T NFmiNetCDF::Y0() {
+  T ret = kFloatMissing;
 
   if (Projection() == "polar_stereographic") {
     auto latVar = itsDataFile->get_var("latitude");
@@ -503,9 +514,9 @@ float NFmiNetCDF::Y0() {
   }
   else {
 
-    float min = kFloatMissing;
+    T min = kFloatMissing;
 
-    vector<float> values = Values(itsYVar);
+    auto values = Values<T>(itsYVar);
 
     for (unsigned int i=0; i < values.size(); i++) {
       if (min == kFloatMissing || values[i] < min) min = values[i];
@@ -516,6 +527,8 @@ float NFmiNetCDF::Y0() {
   return ret;
 
 }
+
+template float NFmiNetCDF::Y0<float>();
 
 float NFmiNetCDF::Orientation() {
   float ret = kFloatMissing;
@@ -535,22 +548,24 @@ std::string NFmiNetCDF::Projection() {
   return itsProjection;
 }
 
-std::vector<float> NFmiNetCDF::Values(std::string theParameter) {
+template <typename T>
+vector<T> NFmiNetCDF::Values(std::string theParameter) {
 
-  std::vector<float> values;
+  vector<T> values;
 
   for (unsigned int i = 0; i  < itsParameters.size(); i++) {
     if (itsParameters[i]->name() == theParameter) {
-      values = Values(itsParameters[i], TimeIndex(), LevelIndex());
-    break;
-  }
+      values = Values<T>(itsParameters[i], TimeIndex(), LevelIndex());
+      break;
+    }
   }
 
   return values;
 }
 
-std::vector<float> NFmiNetCDF::Values() {
-  return Values(Param(), TimeIndex(), LevelIndex());
+template <typename T>
+vector<T> NFmiNetCDF::Values() {
+  return Values<T>(Param(), TimeIndex(), LevelIndex());
 }
 
 NcVar* NFmiNetCDF::GetVariable(const string& varName)
@@ -566,17 +581,18 @@ bool NFmiNetCDF::WriteSliceToCSV(const string &theFileName) {
   ofstream theOutFile;
   theOutFile.open(theFileName.c_str());
   
-  vector<float> Xs = Values(itsXVar);
+  auto Xs = Values<float>(itsXVar);
 
   if (itsXFlip)
     reverse(Xs.begin(), Xs.end());
 
-  vector<float> Ys = Values(itsYVar);
+  auto Ys = Values<float>(itsYVar);
 
   if (itsYFlip)
     reverse(Ys.begin(), Ys.end());
 
-  vector<float> values = Values();
+
+  auto values = Values<float>();
 
   for (unsigned int y = 0; y < Ys.size(); y++) {
    for (unsigned int x = 0; x < Xs.size(); x++) {
@@ -594,8 +610,49 @@ bool CopyAtts(NcVar* newvar, NcVar* oldvar)
 {
   for (unsigned short i = 0; i < oldvar->num_atts(); i++) {
     auto att = unique_ptr<NcAtt> (oldvar->get_att(i));
-    if (!newvar->add_att(att->name(), att->as_string(0))) {
-      return false;
+ 
+    auto nctype = att->type();
+
+    if (nctype == ncShort){
+      if (!newvar->add_att(att->name(), att->as_short(0))) {
+        return false;
+      }
+    }
+
+    else if (nctype == ncDouble){
+      if (!newvar->add_att(att->name(), att->as_double(0))) {
+        return false;
+      }
+    }
+
+    else if (nctype == ncFloat){
+      if (!newvar->add_att(att->name(), att->as_float(0))) {
+        return false;
+      }
+    }
+
+    else if (nctype == ncChar){
+      if (!newvar->add_att(att->name(), att->as_string(0))) {
+        return false;
+      }
+    }
+
+    else if (nctype == ncInt){
+      if (!newvar->add_att(att->name(), att->as_int(0))) {
+        return false;
+      }
+    }
+
+    else if (nctype == ncByte){
+      if (!newvar->add_att(att->name(), att->as_ncbyte(0))) {
+        return false;
+      }
+    }
+
+    else{
+      if (!newvar->add_att(att->name(), att->as_string(0))) {
+        return false;
+      }
     }
   }
     
@@ -673,7 +730,7 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
   // Flip x values if requested
 
   assert(itsXVar);
-  vector<float> xValues = Values(itsXVar);
+  auto xValues = Values<float>(itsXVar);
 
   if (itsXFlip)
     reverse(xValues.begin(), xValues.end());
@@ -686,7 +743,7 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
   if (!(theYVar = theOutFile.add_var(itsYVar->name(), ncFloat, theYDim)))
     return false;
 
-  CopyAtts(theXVar, itsXVar);
+  CopyAtts(theYVar, itsYVar);
 
 
   // Put coordinate data
@@ -694,7 +751,7 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
   // Flip y values if requested
 
   assert(itsYVar);
-  vector<float> yValues = Values(itsYVar);
+  auto yValues = Values<float>(itsYVar);
 
   if (itsYFlip)
     reverse(yValues.begin(), yValues.end());
@@ -718,7 +775,7 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
      * kFloatMissing. In that case we set level = 0.
      */
   
-  float zValue = Level();
+  auto zValue = Level();
 
     if (zValue == kFloatMissing)
       zValue = 0;
@@ -732,16 +789,65 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
 
   // t
 
-  if (!(theTVar = theOutFile.add_var(itsTDim->name(), ncFloat, theTDim)))
-    return false;
+  switch (itsTVar->type())
+  {
+    case ncFloat  : if (!(theTVar = theOutFile.add_var(itsTDim->name(), ncFloat, theTDim))) return false;
+                    break;
+    case ncDouble : if (!(theTVar = theOutFile.add_var(itsTDim->name(), ncDouble, theTDim))) return false;
+                    break;
+    case ncShort  : if (!(theTVar = theOutFile.add_var(itsTDim->name(), ncShort, theTDim))) return false;
+                    break;
+    case ncInt    : if (!(theTVar = theOutFile.add_var(itsTDim->name(), ncInt, theTDim))) return false;
+                    break;
+    case ncChar :
+    case ncByte :
+    case ncNoType :
+    default : cout << "NcType not supported for Time" << endl;
 
-  CopyAtts(theZVar, itsZVar);
+  }
 
-  float tValue = Time();
+  CopyAtts(theTVar, itsTVar);
 
-  if (!theTVar->put(&tValue, 1))
-    return false;
+  switch (itsTVar->type())
+  {
+    case ncFloat :
+    {
+       auto tValue = Time<float>();
+       if (!theTVar->put(&tValue, 1))
+         return false;
+    }
+    break;
 
+    case ncDouble :
+    { 
+       auto tValue = Time<double>();
+       if (!theTVar->put(&tValue, 1))
+         return false;
+    }
+    break;
+
+    case ncShort :
+    {
+       auto tValue = Time<short>();
+       if (!theTVar->put(&tValue, 1))
+         return false;
+    }
+    break;
+
+    case ncInt :
+    {
+       auto tValue = Time<int>();
+       if (!theTVar->put(&tValue, 1))
+         return false;
+    }
+    break;
+
+    case ncChar :
+    case ncByte :
+    case ncNoType :
+    default : cout << "NcType not supported for data" << endl;
+
+  }
   // parameter
 
   // Add dimensions to parameter. Note! Order must be the same!
@@ -778,18 +884,88 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
   }
   }
 
-  if (!(outvar = theOutFile.add_var(var->name(), ncFloat, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
+  switch (var->type())
   {
-    return false;
+    case ncFloat :   if (!(outvar = theOutFile.add_var(var->name(), ncFloat, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
+                     {
+                       return false;
+                     }
+                     break;
+
+    case ncDouble :  if (!(outvar = theOutFile.add_var(var->name(), ncDouble, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
+                     {
+                       return false;
+                     }
+                     break;
+
+    case ncShort :   if (!(outvar = theOutFile.add_var(var->name(), ncShort, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
+                     {
+                       return false;
+                     }
+                     break;
+
+    case ncInt :     if (!(outvar = theOutFile.add_var(var->name(), ncInt, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
+                     {
+                       return false;
+                     }
+                     break;
+    case ncChar :
+    case ncByte :
+    case ncNoType :
+    default : cout << "NcType not supported" << endl;
   }
 
-  CopyAtts(outvar, var);
+CopyAtts(outvar, var);
 
-  vector<float> data = Values();
-
-  if (!outvar->put(&data[0], &cursor_position[0]))
+  switch (var->type())
   {
-    return false;
+    case ncFloat : 
+    {
+                         auto float_data = Values<float>();
+                         if (!(outvar->put(&float_data[0], &cursor_position[0])))
+                         {
+                           return false;
+                         }
+    }
+                         break;
+
+    case ncDouble : 
+    {
+                         auto double_data = Values<double>();
+                         if (!(outvar->put(&double_data[0], &cursor_position[0])))
+                         {
+                           return false;
+                         }
+
+    }
+                         break;
+
+    case ncShort : 
+    {
+                         auto short_data = Values<short>();
+                         if (!(outvar->put(&short_data[0], &cursor_position[0])))
+                         {
+                           return false;
+                         }
+
+    }
+                         break;
+
+    case ncInt : 
+    {
+                         auto int_data = Values<int>();
+                         if (!(outvar->put(&int_data[0], &cursor_position[0])))
+                         {
+                           return false;
+                         }
+
+    }
+                         break;
+
+    case ncChar : 
+    case ncByte :
+    case ncNoType :
+    default : cout << "NcType not supported" << endl;
   }
 
   // Global attributes

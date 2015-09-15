@@ -32,7 +32,8 @@ class NFmiNetCDF {
 
     void ResetTime();
     bool NextTime();
-    float Time();
+    template <typename T>
+    T Time();
     long TimeIndex();
     std::string TimeUnit();
 
@@ -47,19 +48,27 @@ class NFmiNetCDF {
     bool NextParam();
     NcVar* Param();
 
-    float X0();
-    float Y0();
+    template <typename T>
+    T X0();
 
-	float Orientation();
+    template <typename T>
+    T Y0();
+
+    float Orientation();
 
     float ValueT(long num);
     float ValueZ(long num);
 
     std::string Projection();
-    std::vector<float> Values(std::string theParameter);
-    std::vector<float> Values();
+
+    template <typename T>
+    std::vector<T> Values(std::string theParameter);
+
+    template <typename T>
+    std::vector<T> Values();
 
     bool WriteSlice(const std::string &theFileName);
+
     bool WriteSliceToCSV(const std::string &theFileName);
 
     bool FlipX();
@@ -71,10 +80,10 @@ class NFmiNetCDF {
     float XResolution();
     float YResolution();
 
-	NcVar* GetVariable(const std::string& varName);
+    NcVar* GetVariable(const std::string& varName);
     bool CoordinatesInRowMajorOrder(const NcVar* var);
 
-	bool HasDimension(const std::string& dimName);
+    bool HasDimension(const std::string& dimName);
     std::string Att(const std::string& attName);
 
   private:
@@ -82,8 +91,11 @@ class NFmiNetCDF {
     bool HasDimension(const NcVar* var, const std::string &dim);
     std::string Att(NcVar* var, const std::string& attName);
 
-    std::vector<float> Values(NcVar* var);
-    std::vector<float> Values(NcVar* var, long timeIndex, long levelIndex = -1);
+    template <typename T>
+    std::vector<T> Values(NcVar* var);
+
+    template <typename T>
+    std::vector<T> Values(NcVar* var, long timeIndex, long levelIndex = -1);
 
     bool ReadDimensions();
     bool ReadVariables();
@@ -103,7 +115,7 @@ class NFmiNetCDF {
     std::string itsInstitution;
 
     std::vector<NcVar*> itsParameters;
-	std::vector<NcVar*>::iterator itsParamIterator;
+    std::vector<NcVar*>::iterator itsParamIterator;
     NcVar* itsZVar;
     NcVar* itsXVar;
     NcVar* itsYVar;
@@ -112,7 +124,7 @@ class NFmiNetCDF {
     bool itsXFlip;
     bool itsYFlip;
     
-	long itsParamIndex;
-	long itsTimeIndex;
-	long itsLevelIndex;
+    long itsParamIndex;
+    long itsTimeIndex;
+    long itsLevelIndex;
 };
