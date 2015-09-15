@@ -20,8 +20,8 @@ CC = /usr/bin/g++
 
 # Default compiler flags
 
-CFLAGS = -fPIC -std=c++0x -DUNIX -O2 -DNDEBUG $(MAINFLAGS) 
-LDFLAGS = -shared -Wl,-soname,lib$(LIB).so
+CFLAGS = -fPIC -std=c++11 -DUNIX -O2 -DNDEBUG $(MAINFLAGS) 
+LDFLAGS = -shared
 
 # Special modes
 
