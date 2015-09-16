@@ -1031,26 +1031,26 @@ float NFmiNetCDF::XResolution() {
   float x1 = itsXVar->as_float(0);
   float x2 = itsXVar->as_float(1);
   
-  float delta = x2 - x1;
+  float delta = fdim(x2,x1);
   string units = Att(itsXVar, "units");
   if (!units.empty()) {
     if (units == "100  km") delta *= 100;
   }
   
-  return fabs(delta);
+  return delta;
 }
 
 float NFmiNetCDF::YResolution() {
   float y1 = itsYVar->as_float(0);
   float y2 = itsYVar->as_float(1);
   
-  float delta = y2 - y1;
+  float delta = fdim(y2,y1);
   string units = Att(itsYVar, "units");
   if (!units.empty()) {
     if (units == "100  km") delta *= 100;
   }
   
-  return fabs(delta);
+  return delta;
 }
 
 bool NFmiNetCDF::CoordinatesInRowMajorOrder(const NcVar* var)
