@@ -932,6 +932,11 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
 
 CopyAtts(outvar, var);
 
+#ifndef NDEBUG
+  auto att = unique_ptr<NcAtt> (outvar->get_att("_FillValue"));
+  assert(att->type() == outvar->type()); 
+#endif
+
   switch (var->type())
   {
     case ncFloat : 
