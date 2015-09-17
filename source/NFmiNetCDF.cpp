@@ -613,9 +613,24 @@ bool CopyAtts(NcVar* newvar, NcVar* oldvar)
  
     auto nctype = att->type();
 
-    if (nctype == ncShort){
-      if (!newvar->add_att(att->name(), att->as_short(0))) {
-        return false;
+    if (att->name() == NcToken("_FillValue") || att->name() == NcToken("missing_value")){
+      switch (oldvar->type())
+      {
+        case ncFloat   : if(!newvar->add_att(att->name(), att->as_float(0))) return false;
+                         break;
+
+        case ncDouble  : if(!newvar->add_att(att->name(), att->as_double(0))) return false;
+                         break;
+
+        case ncShort   : if(!newvar->add_att(att->name(), att->as_short(0))) return false;
+                         break;
+
+        case ncInt     : if(!newvar->add_att(att->name(), att->as_int(0))) return false;
+                         break;
+        case ncChar :
+        case ncByte :
+        case ncNoType :
+        default : cout << "NcType not supported for Var" << endl;
       }
     }
 
