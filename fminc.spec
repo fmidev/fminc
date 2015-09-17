@@ -1,7 +1,7 @@
 %define LIBNAME fminc
 Summary: fminc library
 Name: lib%{LIBNAME}
-Version: 15.9.15
+Version: 15.9.17
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -54,6 +54,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/*.h
 
 %changelog
+* Thu Sep 17 2015 Mikko Partio <mikko.partio@fmi.fi> - 14.9.17-1.fmi
+- Bugfixes to follow conventions to the letter
 * Tue Sep 15 2015 Mikko Partio <mikko.partio@fmi.fi> - 14.9.15-1.fmi
 - Reworked library with support to different data types inside file
 * Thu Sep  4 2014 Mikko Partio <mikko.partio@fmi.fi> - 14.9.4-1.fmi
