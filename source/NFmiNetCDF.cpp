@@ -613,7 +613,7 @@ bool CopyAtts(NcVar* newvar, NcVar* oldvar)
  
     auto nctype = att->type();
 
-    if (att->name() == NcToken("_FillValue") || att->name() == NcToken("missing_value")){
+    if (static_cast<string> (att->name()) == "_FillValue" || static_cast<string> (att->name()) == "missing_value"){
       switch (oldvar->type())
       {
         case ncFloat   : if(!newvar->add_att(att->name(), att->as_float(0))) return false;
