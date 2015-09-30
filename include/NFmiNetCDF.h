@@ -120,6 +120,7 @@ class NFmiNetCDF {
     NcVar* itsXVar;
     NcVar* itsYVar;
     NcVar* itsTVar;
+    NcVar* itsProjectionVar;
 
     bool itsXFlip;
     bool itsYFlip;

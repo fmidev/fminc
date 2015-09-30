@@ -91,6 +91,7 @@ NFmiNetCDF::NFmiNetCDF()
  , itsXVar(0)
  , itsYVar(0)
  , itsTVar(0)
+ , itsProjectionVar(0)
  , itsXFlip(false)
  , itsYFlip(false)
 {
@@ -106,6 +107,7 @@ NFmiNetCDF::NFmiNetCDF(const string &theInfile)
  , itsXVar(0)
  , itsYVar(0)
  , itsTVar(0) 
+ , itsProjectionVar(0)
  , itsXFlip(false)
  , itsYFlip(false)
 {
@@ -333,7 +335,9 @@ bool NFmiNetCDF::ReadVariables() {
         itsProjection = string(s);
 		delete [] s;
 		
-	    break;
+		itsProjectionVar = var;
+		
+	    continue;
       }
     }
 
@@ -800,8 +804,6 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
 
   }
 
-
-
   // t
 
   switch (itsTVar->type())
@@ -930,8 +932,45 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
     default : cout << "NcType not supported" << endl;
   }
 
-CopyAtts(outvar, var);
+  CopyAtts(outvar, var);
+ 
+  // Add projection variable if it exists 
 
+  if (itsProjectionVar) {
+    NcVar* outprojvar = 0;
+    switch (itsProjectionVar->type())
+    {
+      case ncFloat : if (!(outprojvar = theOutFile.add_var(itsProjectionVar->name(), ncFloat)))
+                     {
+                       return false;
+                     }
+                     break;
+
+      case ncDouble :if (!(outprojvar = theOutFile.add_var(itsProjectionVar->name(), ncDouble)))
+                     {
+                       return false;
+                     }
+                     break;
+
+      case ncShort : if (!(outprojvar = theOutFile.add_var(itsProjectionVar->name(), ncShort)))
+                     {
+                       return false;
+                     }
+                     break;
+
+      case ncInt :   if (!(outprojvar = theOutFile.add_var(itsProjectionVar->name(), ncInt)))
+                     {
+                       return false;
+                     }
+                     break;
+      case ncChar :
+      case ncByte :
+      case ncNoType :
+      default : cout << "NcType not supported" << endl;
+    }
+    CopyAtts(outprojvar, itsProjectionVar);
+  }
+  
 #ifndef NDEBUG
   auto att = unique_ptr<NcAtt> (outvar->get_att("_FillValue"));
   assert(att->type() == outvar->type()); 
