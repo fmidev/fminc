@@ -327,21 +327,24 @@ bool NFmiNetCDF::ReadVariables() {
      *  that has attribute "grid_mapping_name".
      */
 
+    bool foundproj=false;
+
     for (short k=0; k < var->num_atts(); k++) {
       auto att = unique_ptr<NcAtt> (var->get_att(k));
-
       if (static_cast<string> (att->name()) == "grid_mapping_name") {
         const char* s = att->as_string(0);
         itsProjection = string(s);
 		delete [] s;
 		
 		itsProjectionVar = var;
-		
-	    continue;
+		foundproj=true;
+	    break;
       }
     }
 
-    itsParameters.push_back(var);
+    if (foundproj || varname == "latitude" || varname == "longitude") continue;
+    
+	itsParameters.push_back(var);
 
   }
 
@@ -612,6 +615,9 @@ bool NFmiNetCDF::WriteSliceToCSV(const string &theFileName) {
 
 bool CopyAtts(NcVar* newvar, NcVar* oldvar)
 {
+  assert(newvar);
+  assert(oldvar);
+  
   for (unsigned short i = 0; i < oldvar->num_atts(); i++) {
     auto att = unique_ptr<NcAtt> (oldvar->get_att(i));
  
@@ -865,6 +871,97 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
     default : cout << "NcType not supported for data" << endl;
 
   }
+ 
+  // Add projection variable if it exists 
+
+  if (itsProjectionVar) {
+    NcVar* outprojvar = 0;
+    switch (itsProjectionVar->type())
+    {
+      case ncFloat : if (!(outprojvar = theOutFile.add_var(itsProjectionVar->name(), ncFloat)))
+                     {
+                       return false;
+                     }
+                     break;
+
+      case ncDouble :if (!(outprojvar = theOutFile.add_var(itsProjectionVar->name(), ncDouble)))
+                     {
+                       return false;
+                     }
+                     break;
+
+      case ncShort : if (!(outprojvar = theOutFile.add_var(itsProjectionVar->name(), ncShort)))
+                     {
+                       return false;
+                     }
+                     break;
+
+      case ncInt :   if (!(outprojvar = theOutFile.add_var(itsProjectionVar->name(), ncInt)))
+                     {
+                       return false;
+                     }
+                     break;
+      case ncChar :
+      case ncByte :
+      case ncNoType :
+      default : cout << "NcType not supported" << endl;
+    }
+    CopyAtts(outprojvar, itsProjectionVar);
+	
+	// Check if "longitude" and "latitude" variables exist
+	
+	NcVar* outlon = 0, *outlat = 0;
+
+	NcVar* lon = itsDataFile->get_var("longitude");
+	NcVar* lat = itsDataFile->get_var("latitude");
+	
+	if (itsProjection == "polar_stereographic" && lon && lat) {
+      // get dims
+      vector<NcDim*> dims;
+	  assert(lon->num_dims() == lat->num_dims());
+	  vector<long> cursors;
+	  
+      for (int i = 0; i < lon->num_dims(); i++) {
+        auto dim = lon->get_dim(i);
+        assert(dim);
+
+        if (static_cast<string> (dim->name()) == static_cast<string> (theXDim->name())) {
+          dims.push_back(theXDim);
+		  cursors.push_back(itsXVar->num_vals());
+		}
+        else if (static_cast<string> (dim->name()) == static_cast<string> (theYDim->name())) {
+          dims.push_back(theYDim);
+		  cursors.push_back(itsYVar->num_vals());
+		}
+	  }
+
+	  assert(lon->num_dims() == static_cast<int> (dims.size()));
+
+      // hard code to float, change later
+	  outlon = theOutFile.add_var(lon->name(), ncFloat, static_cast<int> (dims.size()), const_cast<const NcDim**> (&dims[0]));	
+	  
+	  //outlon = theOutFile.add_var(lon->name(), ncFloat, theXDim, theYDim);	
+	  outlat = theOutFile.add_var(lat->name(), ncFloat, static_cast<int> (dims.size()), const_cast<const NcDim**> (&dims[0]));
+
+	  assert(outlon);
+	  assert(outlat);
+	  
+	  CopyAtts(outlon, lon);
+	  CopyAtts(outlat, lat);
+
+	  // copy data
+	  size_t totalSize = 1;
+	  for (size_t i = 0; i < cursors.size(); i++) totalSize *= cursors[i];
+
+	  vector<float> vals(totalSize);
+	  lon->get(&vals[0], &cursors[0]);
+  	  outlon->put(&vals[0], itsYVar->num_vals(), itsXVar->num_vals());
+
+	  lat->get(&vals[0], &cursors[0]);
+  	  outlat->put(&vals[0], &cursors[0]);
+	}
+  }
+  
   // parameter
 
   // Add dimensions to parameter. Note! Order must be the same!
@@ -903,129 +1000,78 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
 
   switch (var->type())
   {
-    case ncFloat :   if (!(outvar = theOutFile.add_var(var->name(), ncFloat, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
+    case ncFloat : {
+		             if (!(outvar = theOutFile.add_var(var->name(), ncFloat, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
+                     {
+                       return false;
+                     }
+	
+	                 auto float_data = Values<float>();
+                     if (!(outvar->put(&float_data[0], &cursor_position[0])))
                      {
                        return false;
                      }
                      break;
+    }
+    
+	case ncDouble : {
+		             if (!(outvar = theOutFile.add_var(var->name(), ncDouble, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
+                     {
+                       return false;
+                     }
+	                 
+	                 auto double_data = Values<double>();
+                     if (!(outvar->put(&double_data[0], &cursor_position[0])))
+                     {
+                       return false;
+                     }
+                     break;
+    }
+    
+	case ncShort : {
+		             if (!(outvar = theOutFile.add_var(var->name(), ncShort, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
+                     {
+                       return false;
+                     }
+   
+	                 auto short_data = Values<short>();
+                     if (!(outvar->put(&short_data[0], &cursor_position[0])))
+                     {
+                       return false;
+                     }
+	
+	                 break;
+    }
+	
+    case ncInt : {
+		             if (!(outvar = theOutFile.add_var(var->name(), ncInt, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
+                     {
+                       return false;
+                     }
+                     
+                     auto int_data = Values<int>();
+                     if (!(outvar->put(&int_data[0], &cursor_position[0])))
+                     {
+                       return false;
+                     }
 
-    case ncDouble :  if (!(outvar = theOutFile.add_var(var->name(), ncDouble, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
-                     {
-                       return false;
-                     }
-                     break;
-
-    case ncShort :   if (!(outvar = theOutFile.add_var(var->name(), ncShort, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
-                     {
-                       return false;
-                     }
-                     break;
-
-    case ncInt :     if (!(outvar = theOutFile.add_var(var->name(), ncInt, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
-                     {
-                       return false;
-                     }
-                     break;
+	                 break;
+	}
+	
     case ncChar :
     case ncByte :
     case ncNoType :
     default : cout << "NcType not supported" << endl;
+	          return false;
+	          break;
   }
 
   CopyAtts(outvar, var);
- 
-  // Add projection variable if it exists 
-
-  if (itsProjectionVar) {
-    NcVar* outprojvar = 0;
-    switch (itsProjectionVar->type())
-    {
-      case ncFloat : if (!(outprojvar = theOutFile.add_var(itsProjectionVar->name(), ncFloat)))
-                     {
-                       return false;
-                     }
-                     break;
-
-      case ncDouble :if (!(outprojvar = theOutFile.add_var(itsProjectionVar->name(), ncDouble)))
-                     {
-                       return false;
-                     }
-                     break;
-
-      case ncShort : if (!(outprojvar = theOutFile.add_var(itsProjectionVar->name(), ncShort)))
-                     {
-                       return false;
-                     }
-                     break;
-
-      case ncInt :   if (!(outprojvar = theOutFile.add_var(itsProjectionVar->name(), ncInt)))
-                     {
-                       return false;
-                     }
-                     break;
-      case ncChar :
-      case ncByte :
-      case ncNoType :
-      default : cout << "NcType not supported" << endl;
-    }
-    CopyAtts(outprojvar, itsProjectionVar);
-  }
-  
+   
 #ifndef NDEBUG
   auto att = unique_ptr<NcAtt> (outvar->get_att("_FillValue"));
   assert(att->type() == outvar->type()); 
 #endif
-
-  switch (var->type())
-  {
-    case ncFloat : 
-    {
-                         auto float_data = Values<float>();
-                         if (!(outvar->put(&float_data[0], &cursor_position[0])))
-                         {
-                           return false;
-                         }
-    }
-                         break;
-
-    case ncDouble : 
-    {
-                         auto double_data = Values<double>();
-                         if (!(outvar->put(&double_data[0], &cursor_position[0])))
-                         {
-                           return false;
-                         }
-
-    }
-                         break;
-
-    case ncShort : 
-    {
-                         auto short_data = Values<short>();
-                         if (!(outvar->put(&short_data[0], &cursor_position[0])))
-                         {
-                           return false;
-                         }
-
-    }
-                         break;
-
-    case ncInt : 
-    {
-                         auto int_data = Values<int>();
-                         if (!(outvar->put(&int_data[0], &cursor_position[0])))
-                         {
-                           return false;
-                         }
-
-    }
-                         break;
-
-    case ncChar : 
-    case ncByte :
-    case ncNoType :
-    default : cout << "NcType not supported" << endl;
-  }
 
   // Global attributes
 
@@ -1148,7 +1194,7 @@ bool NFmiNetCDF::HasDimension(const NcVar* var, const std::string& dimName)
   
   for (int i = 0; i < num_dims; i++) {
 	  NcDim* dim = var->get_dim(i);
-	  if (dim->name() == dimName) return true;
+	  if (static_cast<string> (dim->name()) == static_cast<string> (dimName)) return true;
   }
   return false;
 }
