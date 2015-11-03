@@ -494,22 +494,13 @@ T NFmiNetCDF::X0() {
     if (lonVar) ret = lonVar->as_float(0);
   }
   else {
-
-    T min = kFloatMissing;
-
-    auto values = Values<T>(itsXVar);
-
-    for (unsigned int i=0; i < values.size(); i++) {
-      if (min == kFloatMissing || values[i] < min) min = values[i];
-    }
-    
-    ret = min;
+    ret = static_cast<T>(itsXVar->as_float(0));
   }
-
   return ret;
 }
 
 template float NFmiNetCDF::X0<float>();
+template double NFmiNetCDF::X0<double>();
 
 template <typename T>
 T NFmiNetCDF::Y0() {
@@ -517,25 +508,16 @@ T NFmiNetCDF::Y0() {
 
   if (Projection() == "polar_stereographic") {
     auto latVar = itsDataFile->get_var("latitude");
-    if (latVar) ret = latVar->as_float(0);
+    if (latVar) ret = static_cast<T>(latVar->as_float(0));
   }
   else {
-
-    T min = kFloatMissing;
-
-    auto values = Values<T>(itsYVar);
-
-    for (unsigned int i=0; i < values.size(); i++) {
-      if (min == kFloatMissing || values[i] < min) min = values[i];
-    }
-    ret = min;
+    ret = static_cast<T>(itsYVar->as_float(0));
   }
-
   return ret;
-
 }
 
 template float NFmiNetCDF::Y0<float>();
+template double NFmiNetCDF::Y0<double>();
 
 float NFmiNetCDF::Orientation() {
   float ret = kFloatMissing;
@@ -1132,30 +1114,28 @@ void NFmiNetCDF::FlipY(bool theYFlip) {
   itsYFlip = theYFlip;
 }
 
-float NFmiNetCDF::XResolution() {
-  float x1 = itsXVar->as_float(0);
-  float x2 = itsXVar->as_float(1);
+double NFmiNetCDF::XResolution() {
+  double x1 = itsXVar->as_double(0);
+  double x2 = itsXVar->as_double(1);
   
-  float delta = fabs(x2-x1);
+  double delta = fabs(x2-x1);
   string units = Att(itsXVar, "units");
   if (!units.empty()) {
     if (units == "100  km") delta *= 100;
   }
-  delta = round(delta*10000)/10000;
 
   return delta;
 }
 
-float NFmiNetCDF::YResolution() {
-  float y1 = itsYVar->as_float(0);
-  float y2 = itsYVar->as_float(1);
+double NFmiNetCDF::YResolution() {
+  double y1 = itsYVar->as_double(0);
+  double y2 = itsYVar->as_double(1);
   
-  float delta = fabs(y2-y1);
+  double delta = fabs(y2-y1);
   string units = Att(itsYVar, "units");
   if (!units.empty()) {
     if (units == "100  km") delta *= 100;
   }
-  delta = round(delta*10000)/10000;
 
   return delta;
 }
