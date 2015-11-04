@@ -77,8 +77,8 @@ class NFmiNetCDF {
     bool FlipY();
     void FlipY(bool theYFlip);
  
-    double XResolution();
-    double YResolution();
+    float XResolution();
+    float YResolution();
 
     NcVar* GetVariable(const std::string& varName);
     bool CoordinatesInRowMajorOrder(const NcVar* var);

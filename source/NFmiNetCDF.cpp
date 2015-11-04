@@ -1114,11 +1114,11 @@ void NFmiNetCDF::FlipY(bool theYFlip) {
   itsYFlip = theYFlip;
 }
 
-double NFmiNetCDF::XResolution() {
-  double x1 = itsXVar->as_double(0);
-  double x2 = itsXVar->as_double(1);
+float NFmiNetCDF::XResolution() {
+  float x1 = itsXVar->as_float(0);
+  float x2 = itsXVar->as_float(1);
   
-  double delta = fabs(x2-x1);
+  float delta = fabs(x2-x1);
   string units = Att(itsXVar, "units");
   if (!units.empty()) {
     if (units == "100  km") delta *= 100;
@@ -1127,11 +1127,11 @@ double NFmiNetCDF::XResolution() {
   return delta;
 }
 
-double NFmiNetCDF::YResolution() {
-  double y1 = itsYVar->as_double(0);
-  double y2 = itsYVar->as_double(1);
+float NFmiNetCDF::YResolution() {
+  float y1 = itsYVar->as_float(0);
+  float y2 = itsYVar->as_float(1);
   
-  double delta = fabs(y2-y1);
+  float delta = fabs(y2-y1);
   string units = Att(itsYVar, "units");
   if (!units.empty()) {
     if (units == "100  km") delta *= 100;
