@@ -1,7 +1,7 @@
 %define LIBNAME fminc
 Summary: fminc library
 Name: lib%{LIBNAME}
-Version: 15.10.1
+Version: 15.11.5
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -54,6 +54,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/*.h
 
 %changelog
+* Thu Nov  5 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.5-1.fmi
+- Fixes in precisions of coordinates
 * Thu Oct  1 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.10.1-1.fmi
 - Add latitude and longitude varibables to output file if projection is stereographic
 * Wed Sep 30 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.9.30-1.fmi
