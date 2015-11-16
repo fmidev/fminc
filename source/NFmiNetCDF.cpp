@@ -771,7 +771,7 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
   if (itsZDim && itsZVar)
   {
     if (!(theZVar = theOutFile.add_var(theZDim->name(), ncFloat, theZDim)))
-  {
+    {
       return false;
     }
 
@@ -782,7 +782,7 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
      * kFloatMissing. In that case we set level = 0.
      */
   
-  auto zValue = Level();
+    auto zValue = Level();
 
     if (zValue == kFloatMissing)
       zValue = 0;
@@ -983,12 +983,12 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
   switch (var->type())
   {
     case ncFloat : {
-		             if (!(outvar = theOutFile.add_var(var->name(), ncFloat, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
+	             if (!(outvar = theOutFile.add_var(var->name(), ncFloat, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
                      {
                        return false;
                      }
 	
-	                 auto float_data = Values<float>();
+                     auto float_data = Values<float>();
                      if (!(outvar->put(&float_data[0], &cursor_position[0])))
                      {
                        return false;
@@ -996,13 +996,13 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
                      break;
     }
     
-	case ncDouble : {
-		             if (!(outvar = theOutFile.add_var(var->name(), ncDouble, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
+    case ncDouble : {
+		     if (!(outvar = theOutFile.add_var(var->name(), ncDouble, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
                      {
                        return false;
                      }
 	                 
-	                 auto double_data = Values<double>();
+                     auto double_data = Values<double>();
                      if (!(outvar->put(&double_data[0], &cursor_position[0])))
                      {
                        return false;
@@ -1010,23 +1010,22 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
                      break;
     }
     
-	case ncShort : {
-		             if (!(outvar = theOutFile.add_var(var->name(), ncShort, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
+    case ncShort : {
+	             if (!(outvar = theOutFile.add_var(var->name(), ncShort, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
                      {
                        return false;
                      }
    
-	                 auto short_data = Values<short>();
+                     auto short_data = Values<short>();
                      if (!(outvar->put(&short_data[0], &cursor_position[0])))
                      {
                        return false;
                      }
-	
-	                 break;
+                     break;
     }
 	
     case ncInt : {
-		             if (!(outvar = theOutFile.add_var(var->name(), ncInt, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
+	             if (!(outvar = theOutFile.add_var(var->name(), ncInt, static_cast<int> (num_dims), const_cast<const NcDim**> (&dims[0]))))
                      {
                        return false;
                      }
@@ -1037,8 +1036,8 @@ bool NFmiNetCDF::WriteSlice(const std::string &theFileName) {
                        return false;
                      }
 
-	                 break;
-	}
+                     break;
+    }
 	
     case ncChar :
     case ncByte :
@@ -1171,10 +1170,17 @@ bool NFmiNetCDF::HasDimension(const std::string& dimName)
 bool NFmiNetCDF::HasDimension(const NcVar* var, const std::string& dimName)
 {
   long num_dims = var->num_dims();
-  
+  if(dimName == "z" && !itsZDim) return false;
+
   for (int i = 0; i < num_dims; i++) {
 	  NcDim* dim = var->get_dim(i);
-	  if (static_cast<string> (dim->name()) == static_cast<string> (dimName)) return true;
+          string dimname;
+          if (dimName == "z") dimname = itsZDim->name();
+          else if (dimName == "t") dimname = itsTDim->name();
+          else if (dimName == "x") dimname = itsXDim->name(); 
+          else if (dimName == "y") dimname = itsYDim->name(); 
+
+	  if (static_cast<string> (dim->name()) == dimname) return true;
   }
   return false;
 }
