@@ -334,17 +334,17 @@ bool NFmiNetCDF::ReadVariables() {
       if (static_cast<string> (att->name()) == "grid_mapping_name") {
         const char* s = att->as_string(0);
         itsProjection = string(s);
-		delete [] s;
+	delete [] s;
 		
-		itsProjectionVar = var;
-		foundproj=true;
-	    break;
+	itsProjectionVar = var;
+	foundproj=true;
+        break;
       }
     }
 
     if (foundproj || varname == "latitude" || varname == "longitude") continue;
     
-	itsParameters.push_back(var);
+    itsParameters.push_back(var);
 
   }
 
@@ -518,6 +518,40 @@ T NFmiNetCDF::Y0() {
 
 template float NFmiNetCDF::Y0<float>();
 template double NFmiNetCDF::Y0<double>();
+
+template <typename T>
+T NFmiNetCDF::X1() {
+  T ret = kFloatMissing;
+  
+  if (Projection() == "polar_stereographic") {
+    auto lonVar = itsDataFile->get_var("longitude");
+    if (lonVar) ret = lonVar->as_float(lonVar->num_vals()-1);
+  }
+  else {
+    ret = static_cast<T>(itsXVar->as_float(itsXVar->num_vals()-1));
+  }
+  return ret;
+}
+
+template float NFmiNetCDF::X1<float>();
+template double NFmiNetCDF::X1<double>();
+
+template <typename T>
+T NFmiNetCDF::Y1() {
+  T ret = kFloatMissing;
+
+  if (Projection() == "polar_stereographic") {
+    auto latVar = itsDataFile->get_var("latitude");
+    if (latVar) ret = static_cast<T>(latVar->as_float(latVar->num_vals()-1));
+  }
+  else {
+    ret = static_cast<T>(itsYVar->as_float(itsYVar->num_vals()));
+  }
+  return ret;
+}
+
+template float NFmiNetCDF::Y1<float>();
+template double NFmiNetCDF::Y1<double>();
 
 float NFmiNetCDF::Orientation() {
   float ret = kFloatMissing;

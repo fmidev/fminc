@@ -50,9 +50,13 @@ class NFmiNetCDF {
 
     template <typename T>
     T X0();
-
     template <typename T>
     T Y0();
+
+    template <typename T>
+    T X1();
+    template <typename T>
+    T Y1();
 
     float Orientation();
 

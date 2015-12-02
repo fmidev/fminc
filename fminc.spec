@@ -1,7 +1,7 @@
 %define LIBNAME fminc
 Summary: fminc library
 Name: lib%{LIBNAME}
-Version: 15.11.16
+Version: 15.12.2
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -54,6 +54,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/*.h
 
 %changelog
+* Wed Dec  2 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.12.2-1.fmi
+- Add functions X1() and Y1()
 * Mon Nov 16 2015 Andreas Tack  <andreas.tack@fmi.fi> - 15.11.16-1.fmi
 - Fixes in HasDimension function
 * Thu Nov  5 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.11.5-1.fmi
