@@ -545,7 +545,7 @@ T NFmiNetCDF::Y1() {
     if (latVar) ret = static_cast<T>(latVar->as_float(latVar->num_vals()-1));
   }
   else {
-    ret = static_cast<T>(itsYVar->as_float(itsYVar->num_vals()));
+    ret = static_cast<T>(itsYVar->as_float(itsYVar->num_vals()-1));
   }
   return ret;
 }
