@@ -188,7 +188,7 @@ bool NFmiNetCDF::ReadDimensions() {
       itsYDim = dim;
     }
 
-    if (name == "time" || name == "rec" || dim->is_unlimited()) {
+    if (name == "time" || name == "time_counter" || name == "rec" || dim->is_unlimited()) {
       itsTDim = dim;
     }
 
