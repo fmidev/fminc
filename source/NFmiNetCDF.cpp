@@ -197,7 +197,11 @@ bool NFmiNetCDF::ReadDimensions() {
     }
   }
 
-  if (!itsTDim || !itsTDim->is_valid()) {
+  if (!itsYDim || !itsXDim || (!itsTDim || !itsTDim->is_valid())) {
+    cout << "Required dimensions not found" << endl
+	<< "x dim: " << (itsXDim ? "found" : "not found") << endl
+	<< "y dim: " << (itsYDim ? "found" : "not found") << endl
+	<< "time dim: " << (itsTDim ? "found " : "not found ") << "is valid: " << (itsTDim && itsTDim->is_valid() ? "yes" : "no") << endl;
     return false;
   }
 
