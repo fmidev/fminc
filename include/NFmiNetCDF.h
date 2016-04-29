@@ -112,6 +112,8 @@ class NFmiNetCDF {
     NcDim *itsYDim;
     NcDim *itsZDim;
 
+    constexpr static float kFloatMissing = 32700.0f;
+
     std::unique_ptr<NcFile> itsDataFile;
 
     std::string itsConvention;
@@ -133,3 +135,34 @@ class NFmiNetCDF {
     long itsTimeIndex;
     long itsLevelIndex;
 };
+
+template <typename T>
+T NFmiNetCDF::X1() {
+  T ret = kFloatMissing;
+  
+  if (Projection() == "polar_stereographic") {
+    auto lonVar = itsDataFile->get_var("longitude");
+    if (lonVar) ret = lonVar->as_float(lonVar->num_vals()-1);
+  }
+  else {
+    ret = static_cast<T>(itsXVar->as_float(itsXVar->num_vals()-1));
+  }
+  return ret;
+}
+
+template <typename T>
+T NFmiNetCDF::Y1() {
+  T ret = kFloatMissing;
+
+  if (Projection() == "polar_stereographic") {
+    auto latVar = itsDataFile->get_var("latitude");
+    if (latVar) ret = static_cast<T>(latVar->as_float(latVar->num_vals()-1));
+  }
+  else {
+    ret = static_cast<T>(itsYVar->as_float(itsYVar->num_vals()-1));
+  }
+  return ret;
+}
+
+template float NFmiNetCDF::X1<float>();
+template double NFmiNetCDF::X1<double>();
