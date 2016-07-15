@@ -16,7 +16,7 @@ class NFmiNetCDF {
     NFmiNetCDF(const std::string &theInfile);
     ~NFmiNetCDF();
 
-    constexpr static const float kFloatMissing = 32700.0f;
+    static const float kFloatMissing;
 
     bool Read(const std::string &theInfile);
 
