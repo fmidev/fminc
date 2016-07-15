@@ -10,7 +10,6 @@
 
 using namespace std;
 
-// const float NFmiNetCDF::kFloatMissing = 32700.f;
 const float MAX_COORDINATE_RESOLUTION_ERROR = 1e-4f;
 
 std::string NFmiNetCDF::Att(const std::string& attName) {

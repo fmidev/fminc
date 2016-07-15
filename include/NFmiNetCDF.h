@@ -16,6 +16,8 @@ class NFmiNetCDF {
     NFmiNetCDF(const std::string &theInfile);
     ~NFmiNetCDF();
 
+    constexpr static const float kFloatMissing = 32700.0f;
+
     bool Read(const std::string &theInfile);
 
     unsigned int Process();
@@ -111,8 +113,6 @@ class NFmiNetCDF {
     NcDim *itsXDim;
     NcDim *itsYDim;
     NcDim *itsZDim;
-
-    constexpr static float kFloatMissing = 32700.0f;
 
     std::unique_ptr<NcFile> itsDataFile;
 
