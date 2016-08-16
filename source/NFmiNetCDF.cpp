@@ -384,25 +384,25 @@ bool NFmiNetCDF::ReadAttributes() {
   
 long int NFmiNetCDF::SizeX() {
   long ret = 0;
-  if (itsXVar) ret = itsXVar->num_vals();
+  if (itsXDim) ret = itsXDim->size();
   return ret;
 }
 
 long int NFmiNetCDF::SizeY() {
   long ret = 0;
-  if (itsYVar) ret =  itsYVar->num_vals();
+  if (itsYDim) ret =  itsYDim->size();
   return ret;
 }
 
 long int NFmiNetCDF::SizeZ() {
   long ret = 0;
-  if (itsZVar) ret = itsZVar->num_vals();
+  if (itsZDim) ret = itsZDim->size();
   return ret;
 }
 
 long int NFmiNetCDF::SizeT() {
   long ret = 0;
-  if (itsTVar) ret = itsTVar->num_vals();
+  if (itsTDim) ret = itsTDim->size();
   return ret;
 }
 
