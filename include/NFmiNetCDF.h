@@ -29,6 +29,11 @@ class NFmiNetCDF
 	long int SizeT();
 	long int SizeParams();
 
+        nc_type TypeX() const;
+        nc_type TypeY() const;
+        nc_type TypeZ() const;
+        nc_type TypeT() const;
+
 	bool IsConvention();
 	std::string Convention();
 

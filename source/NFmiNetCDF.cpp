@@ -415,6 +415,26 @@ long int NFmiNetCDF::SizeT()
 	return ret;
 }
 
+nc_type NFmiNetCDF::TypeX() const
+{
+	return itsXVar->type();
+}
+
+nc_type NFmiNetCDF::TypeY() const
+{
+	return itsYVar->type();
+}
+
+nc_type NFmiNetCDF::TypeZ() const
+{
+	return itsZVar->type();
+}
+
+nc_type NFmiNetCDF::TypeT() const
+{
+	return itsTVar->type();
+}
+
 long int NFmiNetCDF::SizeParams() { return itsParameters.size(); }
 bool NFmiNetCDF::IsConvention() { return (!itsConvention.empty()); }
 string NFmiNetCDF::Convention() { return itsConvention; }
