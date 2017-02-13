@@ -8,78 +8,12 @@
 #include <sstream>
 #include <stdexcept>
 
-using namespace std;
-
 const float MAX_COORDINATE_RESOLUTION_ERROR = 1e-4f;
 const float NFmiNetCDF::kFloatMissing = 32700.0f;
 
-std::string NFmiNetCDF::Att(const std::string& attName) { return Att(Param(), attName); }
-std::string NFmiNetCDF::Att(NcVar* var, const std::string& attName)
-{
-	string ret("");
-	assert(var);
+bool CopyAtts(NcVar* newvar, NcVar* oldvar);
 
-	for (unsigned short i = 0; i < var->num_atts(); i++)
-	{
-		auto att = unique_ptr<NcAtt>(var->get_att(i));
-
-		if (static_cast<string>(att->name()) == attName)
-		{
-			char* s = att->as_string(0);
-			ret = static_cast<string>(s);
-			delete[] s;
-			break;
-		}
-	}
-
-	return ret;
-}
-
-template <typename T>
-vector<T> NFmiNetCDF::Values(NcVar* var)
-{
-	vector<T> values(var->num_vals(), kFloatMissing);
-	var->get(&values[0], var->num_vals());
-	return values;
-}
-
-template <typename T>
-vector<T> NFmiNetCDF::Values(NcVar* var, long timeIndex, long levelIndex)
-{
-	long num_dims = var->num_dims();
-
-	vector<long> cursor_position(num_dims), dimsizes(num_dims);
-
-	for (unsigned short i = 0; i < num_dims; i++)
-	{
-		NcDim* dim = var->get_dim(i);
-		string dimname = static_cast<string>(dim->name());
-
-		long index = 0;
-		long dimsize = dim->size();
-
-		if (itsTDim && dimname == itsTDim->name())
-		{
-			index = timeIndex;
-			dimsize = 1;
-		}
-		else if (levelIndex != -1 && itsZDim && dimname == itsZDim->name())
-		{
-			index = levelIndex;
-			dimsize = 1;
-		}
-
-		cursor_position[i] = index;
-		dimsizes[i] = dimsize;
-	}
-
-	var->set_cur(&cursor_position[0]);
-
-	vector<T> values(itsXDim->size() * itsYDim->size(), kFloatMissing);
-	var->get(&values[0], &dimsizes[0]);
-
-	return values;
-}
+using namespace std;
 
 NFmiNetCDF::NFmiNetCDF()
     : itsTDim(0),
@@ -151,296 +85,65 @@ bool NFmiNetCDF::Read(const string& theInfile)
 	return true;
 }
 
-bool NFmiNetCDF::ReadDimensions()
-{
-	/*
-	 * Read dimensions from netcdf
-	 *
-	 * Usually we have three to four dimensions:
-	 * - x coordinate (grid point x or longitude)
-	 * - y coordinate (grid point y or latitude)
-	 * - time (often referred as unlimited dimension in netcdf terms)
-	 * - level
-	 *
-	 * No support for record-based dimensions (yet).
-	 */
-
-	for (int i = 0; i < itsDataFile->num_dims(); i++)
-	{
-		NcDim* dim = itsDataFile->get_dim(i);
-
-		string name = dim->name();
-
-		// NetCDF conventions suggest x coordinate to be named "lon"
-		if (name == "x" || name == "X" || name == "lon" || name == "longitude")
-		{
-			itsXDim = dim;
-		}
-
-		// NetCDF conventions suggest y coordinate to be named "lat"
-
-		if (name == "y" || name == "Y" || name == "lat" || name == "latitude")
-		{
-			itsYDim = dim;
-		}
-
-		if (name == "time" || name == "time_counter" || name == "rec" || dim->is_unlimited())
-		{
-			itsTDim = dim;
-		}
-
-		if (name == "level" || name == "lev" || name == "depth" || name == "pressure" || name == "height")
-		{
-			itsZDim = dim;
-		}
-	}
-
-	if (!itsYDim || !itsXDim || (!itsTDim || !itsTDim->is_valid()))
-	{
-		cout << "Required dimensions not found" << endl
-		     << "x dim: " << (itsXDim ? "found" : "not found") << endl
-		     << "y dim: " << (itsYDim ? "found" : "not found") << endl
-		     << "time dim: " << (itsTDim ? "found " : "not found ")
-		     << "is valid: " << (itsTDim && itsTDim->is_valid() ? "yes" : "no") << endl;
-		return false;
-	}
-
-	return true;
-}
-
-bool NFmiNetCDF::ReadVariables()
-{
-	/*
-	 * Read variables from netcdf
-	 *
-	 * Each dimension in the file has a corresponding variable,
-	 * also each actual data parameter is presented as a variable.
-	 */
-
-	for (int i = 0; i < itsDataFile->num_vars(); i++)
-	{
-		NcVar* var = itsDataFile->get_var(i);
-
-		string varname = var->name();
-
-		if (itsZDim && varname == static_cast<string>(itsZDim->name()))
-		{
-			/*
-			 * Assume level variable name equals to level dimension name. If it does not, how
-			 * do we know which variable is level variable?
-			 *
-			 * ( maybe when var dimension name == level dimension name and number of variable dimension is one ??
-			 * should be tested )
-			 */
-
-			itsZVar = var;
-
-			continue;
-		}
-		else if (varname == static_cast<string>(itsXDim->name()))
-		{
-			// X-coordinate
-
-			itsXVar = var;
-
-			auto tmp = Values<float>(itsXVar);
-
-			if (itsXFlip) reverse(tmp.begin(), tmp.end());
-
-			if (tmp.size() > 1)
-			{
-				// Check resolution
-
-				float resolution = 0;
-				float prevResolution = resolution;
-
-				float prevX = tmp[0];
-
-				for (unsigned int k = 1; k < tmp.size(); k++)
-				{
-					resolution = tmp[k] - prevX;
-
-					if (k == 1) prevResolution = resolution;
-
-					if (abs(resolution - prevResolution) > MAX_COORDINATE_RESOLUTION_ERROR)
-					{
-						cerr << "X dimension resolution is not constant, diff: " << (prevResolution - resolution)
-						     << endl;
-						return false;
-					}
-
-					prevResolution = resolution;
-					prevX = tmp[k];
-				}
-			}
-
-			continue;
-		}
-		else if (varname == static_cast<string>(itsYDim->name()))
-		{
-			// Y-coordinate
-
-			itsYVar = var;
-
-			auto tmp = Values<float>(itsYVar);
-
-			if (itsYFlip) reverse(tmp.begin(), tmp.end());
-
-			if (tmp.size() > 1)
-			{
-				// Check resolution
-
-				float resolution = 0;
-				float prevResolution = resolution;
-
-				float prevY = tmp[0];
-
-				for (unsigned int k = 1; k < tmp.size(); k++)
-				{
-					resolution = tmp[k] - prevY;
-
-					if (k == 1) prevResolution = resolution;
-
-					if (abs(resolution - prevResolution) > MAX_COORDINATE_RESOLUTION_ERROR)
-					{
-						cerr << "Y dimension resolution is not constant, diff: " << (prevResolution - resolution)
-						     << endl;
-						return false;
-					}
-
-					prevResolution = resolution;
-					prevY = tmp[k];
-				}
-			}
-
-			continue;
-		}
-		else if (varname == static_cast<string>(itsTDim->name()))
-		{
-			/*
-			 * time
-			 *
-			 * Time in NetCDF is an arbitrary point in time in the past and all time in the file
-			 * is an offset to that time.
-			 */
-
-			itsTVar = var;
-
-			continue;
-		}
-
-		/*
-		 *  Search for projection information. CF conforming file has a variable
-		 *  that has attribute "grid_mapping_name".
-		 */
-
-		bool foundproj = false;
-
-		for (short k = 0; k < var->num_atts(); k++)
-		{
-			auto att = unique_ptr<NcAtt>(var->get_att(k));
-			if (static_cast<string>(att->name()) == "grid_mapping_name")
-			{
-				const char* s = att->as_string(0);
-				itsProjection = string(s);
-				delete[] s;
-
-				itsProjectionVar = var;
-				foundproj = true;
-				break;
-			}
-		}
-
-		if (foundproj || varname == "latitude" || varname == "longitude") continue;
-
-		itsParameters.push_back(var);
-	}
-
-	return true;
-}
-
-bool NFmiNetCDF::ReadAttributes()
-{
-	/*
-	 * Read global attributes from netcdf
-	 *
-	 * Attributes are global metadata definitions in the netcdf file.
-	 *
-	 * Two attributes are critical: producer id and analysis time. Both can
-	 * be overwritten by command line options.
-	 */
-
-	for (int i = 0; i < itsDataFile->num_atts(); i++)
-	{
-		auto att = unique_ptr<NcAtt>(itsDataFile->get_att(i));
-
-		string name = att->name();
-
-		if (name == "Conventions" && att->type() == ncChar)
-		{
-			const char* s = att->as_string(0);
-			itsConvention = string(s);
-			delete[] s;
-		}
-	}
-
-	return true;
-}
-
-long int NFmiNetCDF::SizeX()
+// Sizes
+long int NFmiNetCDF::SizeX() const
 {
 	long ret = 0;
 	if (itsXDim) ret = itsXDim->size();
 	return ret;
 }
 
-long int NFmiNetCDF::SizeY()
+long int NFmiNetCDF::SizeY() const
 {
 	long ret = 0;
 	if (itsYDim) ret = itsYDim->size();
 	return ret;
 }
 
-long int NFmiNetCDF::SizeZ()
+long int NFmiNetCDF::SizeZ() const
 {
 	long ret = 0;
 	if (itsZDim) ret = itsZDim->size();
 	return ret;
 }
 
-long int NFmiNetCDF::SizeT()
+long int NFmiNetCDF::SizeT() const
 {
 	long ret = 0;
 	if (itsTDim) ret = itsTDim->size();
 	return ret;
 }
 
-nc_type NFmiNetCDF::TypeX() const
+long int NFmiNetCDF::SizeParams() const { return itsParameters.size(); }
+// Types
+nc_type NFmiNetCDF::TypeX() const { return itsXVar->type(); }
+nc_type NFmiNetCDF::TypeY() const { return itsYVar->type(); }
+nc_type NFmiNetCDF::TypeZ() const { return itsZVar->type(); }
+nc_type NFmiNetCDF::TypeT() const { return itsTVar->type(); }
+// Metadata
+bool NFmiNetCDF::IsConvention() const { return (!itsConvention.empty()); }
+string NFmiNetCDF::Convention() const { return itsConvention; }
+float NFmiNetCDF::Orientation() const
 {
-	return itsXVar->type();
+	float ret = kFloatMissing;
+
+	NcVar* var = itsDataFile->get_var("stereographic");
+
+	if (!var) return ret;
+
+	auto att = unique_ptr<NcAtt>(var->get_att("longitude_of_projection_origin"));
+
+	if (!att) return ret;
+
+	return att->as_float(0);
 }
 
-nc_type NFmiNetCDF::TypeY() const
-{
-	return itsYVar->type();
-}
-
-nc_type NFmiNetCDF::TypeZ() const
-{
-	return itsZVar->type();
-}
-
-nc_type NFmiNetCDF::TypeT() const
-{
-	return itsTVar->type();
-}
-
-long int NFmiNetCDF::SizeParams() { return itsParameters.size(); }
-bool NFmiNetCDF::IsConvention() { return (!itsConvention.empty()); }
-string NFmiNetCDF::Convention() { return itsConvention; }
+std::string NFmiNetCDF::Projection() const { return itsProjection; }
+// Params
 void NFmiNetCDF::FirstParam() { itsParamIterator = itsParameters.begin(); }
 bool NFmiNetCDF::NextParam() { return (++itsParamIterator < itsParameters.end()); }
 NcVar* NFmiNetCDF::Param() { return *itsParamIterator; }
+// Time
 void NFmiNetCDF::ResetTime() { itsTimeIndex = -1; }
 bool NFmiNetCDF::NextTime()
 {
@@ -466,6 +169,9 @@ template double NFmiNetCDF::Time<double>();
 template int NFmiNetCDF::Time<int>();
 template short NFmiNetCDF::Time<short>();
 
+long NFmiNetCDF::TimeIndex() { return itsTimeIndex; }
+string NFmiNetCDF::TimeUnit() { return Att(itsTVar, "units"); }
+// Level
 void NFmiNetCDF::ResetLevel() { itsLevelIndex = -1; }
 bool NFmiNetCDF::NextLevel()
 {
@@ -486,65 +192,7 @@ float NFmiNetCDF::Level()
 	return val;
 }
 
-long NFmiNetCDF::TimeIndex() { return itsTimeIndex; }
-string NFmiNetCDF::TimeUnit() { return Att(itsTVar, "units"); }
 long NFmiNetCDF::LevelIndex() { return itsLevelIndex; }
-template <typename T>
-T NFmiNetCDF::X0()
-{
-	T ret = kFloatMissing;
-
-	if (Projection() == "polar_stereographic")
-	{
-		auto lonVar = itsDataFile->get_var("longitude");
-		if (lonVar) ret = lonVar->as_float(0);
-	}
-	else
-	{
-		ret = static_cast<T>(itsXVar->as_float(0));
-	}
-	return ret;
-}
-
-template float NFmiNetCDF::X0<float>();
-template double NFmiNetCDF::X0<double>();
-
-template <typename T>
-T NFmiNetCDF::Y0()
-{
-	T ret = kFloatMissing;
-
-	if (Projection() == "polar_stereographic")
-	{
-		auto latVar = itsDataFile->get_var("latitude");
-		if (latVar) ret = static_cast<T>(latVar->as_float(0));
-	}
-	else
-	{
-		ret = static_cast<T>(itsYVar->as_float(0));
-	}
-	return ret;
-}
-
-template float NFmiNetCDF::Y0<float>();
-template double NFmiNetCDF::Y0<double>();
-
-float NFmiNetCDF::Orientation()
-{
-	float ret = kFloatMissing;
-
-	NcVar* var = itsDataFile->get_var("stereographic");
-
-	if (!var) return ret;
-
-	auto att = unique_ptr<NcAtt>(var->get_att("longitude_of_projection_origin"));
-
-	if (!att) return ret;
-
-	return att->as_float(0);
-}
-
-std::string NFmiNetCDF::Projection() { return itsProjection; }
 template <typename T>
 vector<T> NFmiNetCDF::Values(std::string theParameter)
 {
@@ -568,7 +216,7 @@ vector<T> NFmiNetCDF::Values()
 	return Values<T>(Param(), TimeIndex(), LevelIndex());
 }
 
-NcVar* NFmiNetCDF::GetVariable(const string& varName)
+NcVar* NFmiNetCDF::GetVariable(const string& varName) const
 {
 	for (unsigned int i = 0; i < itsParameters.size(); i++)
 	{
@@ -601,96 +249,6 @@ bool NFmiNetCDF::WriteSliceToCSV(const string& theFileName)
 	}
 
 	theOutFile.close();
-
-	return true;
-}
-
-bool CopyAtts(NcVar* newvar, NcVar* oldvar)
-{
-	assert(newvar);
-	assert(oldvar);
-
-	for (unsigned short i = 0; i < oldvar->num_atts(); i++)
-	{
-		auto att = unique_ptr<NcAtt>(oldvar->get_att(i));
-
-		auto nctype = att->type();
-
-		if (static_cast<string>(att->name()) == "_FillValue" || static_cast<string>(att->name()) == "missing_value")
-		{
-			switch (oldvar->type())
-			{
-				case ncFloat:
-					if (!newvar->add_att(att->name(), att->as_float(0))) return false;
-					break;
-
-				case ncDouble:
-					if (!newvar->add_att(att->name(), att->as_double(0))) return false;
-					break;
-
-				case ncShort:
-					if (!newvar->add_att(att->name(), att->as_short(0))) return false;
-					break;
-
-				case ncInt:
-					if (!newvar->add_att(att->name(), att->as_int(0))) return false;
-					break;
-				case ncChar:
-				case ncByte:
-				case ncNoType:
-				default:
-					cout << "NcType not supported for Var" << endl;
-			}
-		}
-
-		else if (nctype == ncDouble)
-		{
-			if (!newvar->add_att(att->name(), att->as_double(0)))
-			{
-				return false;
-			}
-		}
-
-		else if (nctype == ncFloat)
-		{
-			if (!newvar->add_att(att->name(), att->as_float(0)))
-			{
-				return false;
-			}
-		}
-
-		else if (nctype == ncChar)
-		{
-			if (!newvar->add_att(att->name(), att->as_string(0)))
-			{
-				return false;
-			}
-		}
-
-		else if (nctype == ncInt)
-		{
-			if (!newvar->add_att(att->name(), att->as_int(0)))
-			{
-				return false;
-			}
-		}
-
-		else if (nctype == ncByte)
-		{
-			if (!newvar->add_att(att->name(), att->as_ncbyte(0)))
-			{
-				return false;
-			}
-		}
-
-		else
-		{
-			if (!newvar->add_att(att->name(), att->as_string(0)))
-			{
-				return false;
-			}
-		}
-	}
 
 	return true;
 }
@@ -1120,9 +678,6 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 }
 
 /*
- * FlipX() and FlipX(bool)
- * FlipY() and FlipY(bool)
- *
  * If itsXFlip is set, when writing slice to NetCDF of CSV file the values of X axis
  * are flipped, ie. from 1 2 3 we have 3 2 1.
  *
@@ -1190,6 +745,8 @@ bool NFmiNetCDF::CoordinatesInRowMajorOrder(const NcVar* var)
 }
 
 bool NFmiNetCDF::HasDimension(const std::string& dimName) { return HasDimension(Param(), dimName); }
+std::string NFmiNetCDF::Att(const std::string& attName) { return Att(Param(), attName); }
+// private functions
 bool NFmiNetCDF::HasDimension(const NcVar* var, const std::string& dimName)
 {
 	long num_dims = var->num_dims();
@@ -1211,4 +768,398 @@ bool NFmiNetCDF::HasDimension(const NcVar* var, const std::string& dimName)
 		if (static_cast<string>(dim->name()) == dimname) return true;
 	}
 	return false;
+}
+
+std::string NFmiNetCDF::Att(NcVar* var, const std::string& attName)
+{
+	string ret("");
+	assert(var);
+
+	for (unsigned short i = 0; i < var->num_atts(); i++)
+	{
+		auto att = unique_ptr<NcAtt>(var->get_att(i));
+
+		if (static_cast<string>(att->name()) == attName)
+		{
+			char* s = att->as_string(0);
+			ret = static_cast<string>(s);
+			delete[] s;
+			break;
+		}
+	}
+
+	return ret;
+}
+
+template <typename T>
+vector<T> NFmiNetCDF::Values(NcVar* var)
+{
+	vector<T> values(var->num_vals(), kFloatMissing);
+	var->get(&values[0], var->num_vals());
+	return values;
+}
+
+template <typename T>
+vector<T> NFmiNetCDF::Values(NcVar* var, long timeIndex, long levelIndex)
+{
+	long num_dims = var->num_dims();
+
+	vector<long> cursor_position(num_dims), dimsizes(num_dims);
+
+	for (unsigned short i = 0; i < num_dims; i++)
+	{
+		NcDim* dim = var->get_dim(i);
+		string dimname = static_cast<string>(dim->name());
+
+		long index = 0;
+		long dimsize = dim->size();
+
+		if (itsTDim && dimname == itsTDim->name())
+		{
+			index = timeIndex;
+			dimsize = 1;
+		}
+		else if (levelIndex != -1 && itsZDim && dimname == itsZDim->name())
+		{
+			index = levelIndex;
+			dimsize = 1;
+		}
+
+		cursor_position[i] = index;
+		dimsizes[i] = dimsize;
+	}
+
+	var->set_cur(&cursor_position[0]);
+
+	vector<T> values(itsXDim->size() * itsYDim->size(), kFloatMissing);
+	var->get(&values[0], &dimsizes[0]);
+
+	return values;
+}
+
+bool NFmiNetCDF::ReadDimensions()
+{
+	/*
+	 * Read dimensions from netcdf
+	 *
+	 * Usually we have three to four dimensions:
+	 * - x coordinate (grid point x or longitude)
+	 * - y coordinate (grid point y or latitude)
+	 * - time (often referred as unlimited dimension in netcdf terms)
+	 * - level
+	 *
+	 * No support for record-based dimensions (yet).
+	 */
+
+	for (int i = 0; i < itsDataFile->num_dims(); i++)
+	{
+		NcDim* dim = itsDataFile->get_dim(i);
+
+		string name = dim->name();
+
+		// NetCDF conventions suggest x coordinate to be named "lon"
+		if (name == "x" || name == "X" || name == "lon" || name == "longitude")
+		{
+			itsXDim = dim;
+		}
+
+		// NetCDF conventions suggest y coordinate to be named "lat"
+
+		if (name == "y" || name == "Y" || name == "lat" || name == "latitude")
+		{
+			itsYDim = dim;
+		}
+
+		if (name == "time" || name == "time_counter" || name == "rec" || dim->is_unlimited())
+		{
+			itsTDim = dim;
+		}
+
+		if (name == "level" || name == "lev" || name == "depth" || name == "pressure" || name == "height")
+		{
+			itsZDim = dim;
+		}
+	}
+
+	if (!itsYDim || !itsXDim || (!itsTDim || !itsTDim->is_valid()))
+	{
+		cout << "Required dimensions not found" << endl
+		     << "x dim: " << (itsXDim ? "found" : "not found") << endl
+		     << "y dim: " << (itsYDim ? "found" : "not found") << endl
+		     << "time dim: " << (itsTDim ? "found " : "not found ")
+		     << "is valid: " << (itsTDim && itsTDim->is_valid() ? "yes" : "no") << endl;
+		return false;
+	}
+
+	return true;
+}
+
+bool NFmiNetCDF::ReadVariables()
+{
+	/*
+	 * Read variables from netcdf
+	 *
+	 * Each dimension in the file has a corresponding variable,
+	 * also each actual data parameter is presented as a variable.
+	 */
+
+	for (int i = 0; i < itsDataFile->num_vars(); i++)
+	{
+		NcVar* var = itsDataFile->get_var(i);
+
+		string varname = var->name();
+
+		if (itsZDim && varname == static_cast<string>(itsZDim->name()))
+		{
+			/*
+			 * Assume level variable name equals to level dimension name. If it does not, how
+			 * do we know which variable is level variable?
+			 *
+			 * ( maybe when var dimension name == level dimension name and number of variable dimension is one ??
+			 * should be tested )
+			 */
+
+			itsZVar = var;
+
+			continue;
+		}
+		else if (varname == static_cast<string>(itsXDim->name()))
+		{
+			// X-coordinate
+
+			itsXVar = var;
+
+			auto tmp = Values<float>(itsXVar);
+
+			if (itsXFlip) reverse(tmp.begin(), tmp.end());
+
+			if (tmp.size() > 1)
+			{
+				// Check resolution
+
+				float resolution = 0;
+				float prevResolution = resolution;
+
+				float prevX = tmp[0];
+
+				for (unsigned int k = 1; k < tmp.size(); k++)
+				{
+					resolution = tmp[k] - prevX;
+
+					if (k == 1) prevResolution = resolution;
+
+					if (abs(resolution - prevResolution) > MAX_COORDINATE_RESOLUTION_ERROR)
+					{
+						cerr << "X dimension resolution is not constant, diff: " << (prevResolution - resolution)
+						     << endl;
+						return false;
+					}
+
+					prevResolution = resolution;
+					prevX = tmp[k];
+				}
+			}
+
+			continue;
+		}
+		else if (varname == static_cast<string>(itsYDim->name()))
+		{
+			// Y-coordinate
+
+			itsYVar = var;
+
+			auto tmp = Values<float>(itsYVar);
+
+			if (itsYFlip) reverse(tmp.begin(), tmp.end());
+
+			if (tmp.size() > 1)
+			{
+				// Check resolution
+
+				float resolution = 0;
+				float prevResolution = resolution;
+
+				float prevY = tmp[0];
+
+				for (unsigned int k = 1; k < tmp.size(); k++)
+				{
+					resolution = tmp[k] - prevY;
+
+					if (k == 1) prevResolution = resolution;
+
+					if (abs(resolution - prevResolution) > MAX_COORDINATE_RESOLUTION_ERROR)
+					{
+						cerr << "Y dimension resolution is not constant, diff: " << (prevResolution - resolution)
+						     << endl;
+						return false;
+					}
+
+					prevResolution = resolution;
+					prevY = tmp[k];
+				}
+			}
+
+			continue;
+		}
+		else if (varname == static_cast<string>(itsTDim->name()))
+		{
+			/*
+			 * time
+			 *
+			 * Time in NetCDF is an arbitrary point in time in the past and all time in the file
+			 * is an offset to that time.
+			 */
+
+			itsTVar = var;
+
+			continue;
+		}
+
+		/*
+		 *  Search for projection information. CF conforming file has a variable
+		 *  that has attribute "grid_mapping_name".
+		 */
+
+		bool foundproj = false;
+
+		for (short k = 0; k < var->num_atts(); k++)
+		{
+			auto att = unique_ptr<NcAtt>(var->get_att(k));
+			if (static_cast<string>(att->name()) == "grid_mapping_name")
+			{
+				const char* s = att->as_string(0);
+				itsProjection = string(s);
+				delete[] s;
+
+				itsProjectionVar = var;
+				foundproj = true;
+				break;
+			}
+		}
+
+		if (foundproj || varname == "latitude" || varname == "longitude") continue;
+
+		itsParameters.push_back(var);
+	}
+
+	return true;
+}
+
+bool NFmiNetCDF::ReadAttributes()
+{
+	/*
+	 * Read global attributes from netcdf
+	 *
+	 * Attributes are global metadata definitions in the netcdf file.
+	 *
+	 * Two attributes are critical: producer id and analysis time. Both can
+	 * be overwritten by command line options.
+	 */
+
+	for (int i = 0; i < itsDataFile->num_atts(); i++)
+	{
+		auto att = unique_ptr<NcAtt>(itsDataFile->get_att(i));
+
+		string name = att->name();
+
+		if (name == "Conventions" && att->type() == ncChar)
+		{
+			const char* s = att->as_string(0);
+			itsConvention = string(s);
+			delete[] s;
+		}
+	}
+
+	return true;
+}
+
+// free functions
+bool CopyAtts(NcVar* newvar, NcVar* oldvar)
+{
+	assert(newvar);
+	assert(oldvar);
+
+	for (unsigned short i = 0; i < oldvar->num_atts(); i++)
+	{
+		auto att = unique_ptr<NcAtt>(oldvar->get_att(i));
+
+		auto nctype = att->type();
+
+		if (static_cast<string>(att->name()) == "_FillValue" || static_cast<string>(att->name()) == "missing_value")
+		{
+			switch (oldvar->type())
+			{
+				case ncFloat:
+					if (!newvar->add_att(att->name(), att->as_float(0))) return false;
+					break;
+
+				case ncDouble:
+					if (!newvar->add_att(att->name(), att->as_double(0))) return false;
+					break;
+
+				case ncShort:
+					if (!newvar->add_att(att->name(), att->as_short(0))) return false;
+					break;
+
+				case ncInt:
+					if (!newvar->add_att(att->name(), att->as_int(0))) return false;
+					break;
+				case ncChar:
+				case ncByte:
+				case ncNoType:
+				default:
+					cout << "NcType not supported for Var" << endl;
+			}
+		}
+
+		else if (nctype == ncDouble)
+		{
+			if (!newvar->add_att(att->name(), att->as_double(0)))
+			{
+				return false;
+			}
+		}
+
+		else if (nctype == ncFloat)
+		{
+			if (!newvar->add_att(att->name(), att->as_float(0)))
+			{
+				return false;
+			}
+		}
+
+		else if (nctype == ncChar)
+		{
+			if (!newvar->add_att(att->name(), att->as_string(0)))
+			{
+				return false;
+			}
+		}
+
+		else if (nctype == ncInt)
+		{
+			if (!newvar->add_att(att->name(), att->as_int(0)))
+			{
+				return false;
+			}
+		}
+
+		else if (nctype == ncByte)
+		{
+			if (!newvar->add_att(att->name(), att->as_ncbyte(0)))
+			{
+				return false;
+			}
+		}
+
+		else
+		{
+			if (!newvar->add_att(att->name(), att->as_string(0)))
+			{
+				return false;
+			}
+		}
+	}
+
+	return true;
 }

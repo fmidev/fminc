@@ -20,22 +20,19 @@ class NFmiNetCDF
 
 	bool Read(const std::string& theInfile);
 
-	unsigned int Process();
-	void Process(unsigned int theProcess);
+	long int SizeX() const;
+	long int SizeY() const;
+	long int SizeZ() const;
+	long int SizeT() const;
+	long int SizeParams() const;
 
-	long int SizeX();
-	long int SizeY();
-	long int SizeZ();
-	long int SizeT();
-	long int SizeParams();
+	nc_type TypeX() const;
+	nc_type TypeY() const;
+	nc_type TypeZ() const;
+	nc_type TypeT() const;
 
-        nc_type TypeX() const;
-        nc_type TypeY() const;
-        nc_type TypeZ() const;
-        nc_type TypeT() const;
-
-	bool IsConvention();
-	std::string Convention();
+	bool IsConvention() const;
+	std::string Convention() const;
 
 	void ResetTime();
 	bool NextTime();
@@ -63,12 +60,8 @@ class NFmiNetCDF
 	template <typename T>
 	T Y1();
 
-	float Orientation();
-
-	float ValueT(long num);
-	float ValueZ(long num);
-
-	std::string Projection();
+	float Orientation() const;
+	std::string Projection() const;
 
 	template <typename T>
 	std::vector<T> Values(std::string theParameter);
@@ -89,7 +82,7 @@ class NFmiNetCDF
 	float XResolution();
 	float YResolution();
 
-	NcVar* GetVariable(const std::string& varName);
+	NcVar* GetVariable(const std::string& varName) const;
 	bool CoordinatesInRowMajorOrder(const NcVar* var);
 
 	bool HasDimension(const std::string& dimName);
@@ -108,8 +101,6 @@ class NFmiNetCDF
 	bool ReadDimensions();
 	bool ReadVariables();
 	bool ReadAttributes();
-
-	bool Write(const std::vector<float>& data, NcFile* theOutFile);
 
 	NcDim* itsTDim;
 	NcDim* itsXDim;
@@ -139,6 +130,46 @@ class NFmiNetCDF
 };
 
 template <typename T>
+T NFmiNetCDF::X0()
+{
+	T ret = kFloatMissing;
+
+	if (Projection() == "polar_stereographic")
+	{
+		auto lonVar = itsDataFile->get_var("longitude");
+		if (lonVar) ret = lonVar->as_float(0);
+	}
+	else
+	{
+		ret = static_cast<T>(itsXVar->as_float(0));
+	}
+	return ret;
+}
+
+template float NFmiNetCDF::X0<float>();
+template double NFmiNetCDF::X0<double>();
+
+template <typename T>
+T NFmiNetCDF::Y0()
+{
+	T ret = kFloatMissing;
+
+	if (Projection() == "polar_stereographic")
+	{
+		auto latVar = itsDataFile->get_var("latitude");
+		if (latVar) ret = static_cast<T>(latVar->as_float(0));
+	}
+	else
+	{
+		ret = static_cast<T>(itsYVar->as_float(0));
+	}
+	return ret;
+}
+
+template float NFmiNetCDF::Y0<float>();
+template double NFmiNetCDF::Y0<double>();
+
+template <typename T>
 T NFmiNetCDF::X1()
 {
 	T ret = kFloatMissing;
@@ -154,6 +185,9 @@ T NFmiNetCDF::X1()
 	}
 	return ret;
 }
+
+template float NFmiNetCDF::X1<float>();
+template double NFmiNetCDF::X1<double>();
 
 template <typename T>
 T NFmiNetCDF::Y1()
@@ -172,5 +206,5 @@ T NFmiNetCDF::Y1()
 	return ret;
 }
 
-template float NFmiNetCDF::X1<float>();
-template double NFmiNetCDF::X1<double>();
+template float NFmiNetCDF::Y1<float>();
+template double NFmiNetCDF::Y1<double>();
