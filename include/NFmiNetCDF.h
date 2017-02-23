@@ -59,6 +59,7 @@ class NFmiNetCDF
 	T Y1();
 
 	float Orientation();
+	float TrueLatitude();
 
 	float ValueT(long num);
 	float ValueZ(long num);

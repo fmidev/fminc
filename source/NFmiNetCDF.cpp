@@ -509,6 +509,21 @@ T NFmiNetCDF::Y0()
 template float NFmiNetCDF::Y0<float>();
 template double NFmiNetCDF::Y0<double>();
 
+float NFmiNetCDF::TrueLatitude()
+{
+	float ret = kFloatMissing;
+
+	NcVar* var = itsDataFile->get_var("stereographic");
+
+	if (!var) return ret;
+
+	auto att = unique_ptr<NcAtt>(var->get_att("latitude_of_projection_origin"));
+
+	if (!att) return ret;
+
+	return att->as_float(0);
+}
+
 float NFmiNetCDF::Orientation()
 {
 	float ret = kFloatMissing;
