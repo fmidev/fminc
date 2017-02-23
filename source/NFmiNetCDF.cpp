@@ -139,6 +139,22 @@ float NFmiNetCDF::Orientation() const
 }
 
 std::string NFmiNetCDF::Projection() const { return itsProjection; }
+
+float NFmiNetCDF::TrueLatitude()
+{
+        float ret = kFloatMissing;
+
+        NcVar* var = itsDataFile->get_var("stereographic");
+
+        if (!var) return ret;
+
+        auto att = unique_ptr<NcAtt>(var->get_att("latitude_of_projection_origin"));
+
+        if (!att) return ret;
+
+        return att->as_float(0);
+}
+
 // Params
 void NFmiNetCDF::FirstParam() { itsParamIterator = itsParameters.begin(); }
 bool NFmiNetCDF::NextParam() { return (++itsParamIterator < itsParameters.end()); }
