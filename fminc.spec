@@ -1,7 +1,7 @@
 %define LIBNAME fminc
 Summary: fminc library
 Name: lib%{LIBNAME}
-Version: 15.12.15
+Version: 17.2.27
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -54,6 +54,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/*.h
 
 %changelog
+* Mon Feb 27 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.27-1.fmi
+- New Type[X,Y,T,Z]() functions
+* Thu Feb 23 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.23-1.fmi
+- Function to get true latitude for polar stereographic projections
 * Tue Dec 15 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.12.15-1.fmi
 - Copernicus data support
 * Wed Dec  2 2015 Mikko Partio <mikko.partio@fmi.fi> - 15.12.2-1.fmi
