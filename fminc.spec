@@ -1,7 +1,7 @@
 %define LIBNAME fminc
 Summary: fminc library
 Name: lib%{LIBNAME}
-Version: 17.2.27
+Version: 17.8.30
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -11,6 +11,8 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Provides: %{LIBNAME}
 BuildRequires: netcdf-devel >= 4.1.1
 BuildRequires: netcdf-cxx-devel
+BuildRequires: boost-devel
+Requires: boost-filesystem
 
 %description
 FMI netcdf library
@@ -54,6 +56,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/*.h
 
 %changelog
+* Wed Aug 30 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.30-1.fmi
+- New boost
 * Mon Feb 27 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.27-1.fmi
 - New Type[X,Y,T,Z]() functions
 * Thu Feb 23 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.23-1.fmi
