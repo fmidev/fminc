@@ -1,7 +1,7 @@
 %define LIBNAME fminc
 Summary: fminc library
 Name: lib%{LIBNAME}
-Version: 17.8.30
+Version: 18.3.13
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -56,6 +56,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/*.h
 
 %changelog
+* Tue Mar 13 2018 Mikko Partio <mikko.partio@fmi.fi> - 19.3.13-1.fmi
+- Change calculation of grid resolution
 * Wed Aug 30 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.30-1.fmi
 - New boost
 * Mon Feb 27 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.2.27-1.fmi
