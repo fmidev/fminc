@@ -172,7 +172,7 @@ bool NFmiNetCDF::NextTime()
 template <typename T>
 T NFmiNetCDF::Time()
 {
-	T val = kFloatMissing;
+	T val = static_cast<T>(kFloatMissing);
 
 	itsTVar->set_cur(&itsTimeIndex);
 	itsTVar->get(&val, 1);
@@ -184,6 +184,8 @@ template float NFmiNetCDF::Time<float>();
 template double NFmiNetCDF::Time<double>();
 template int NFmiNetCDF::Time<int>();
 template short NFmiNetCDF::Time<short>();
+template char NFmiNetCDF::Time<char>();
+template int8_t NFmiNetCDF::Time<int8_t>();
 
 long NFmiNetCDF::TimeIndex() { return itsTimeIndex; }
 string NFmiNetCDF::TimeUnit() { return Att(itsTVar, "units"); }
@@ -399,7 +401,11 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 			if (!(theTVar = theOutFile.add_var(itsTDim->name(), ncInt, theTDim))) return false;
 			break;
 		case ncChar:
+                        if (!(theTVar = theOutFile.add_var(itsTDim->name(), ncChar, theTDim))) return false;
+                        break;
 		case ncByte:
+                        if (!(theTVar = theOutFile.add_var(itsTDim->name(), ncByte, theTDim))) return false;
+                        break;
 		case ncNoType:
 		default:
 			cout << "NcType not supported for Time" << endl;
@@ -438,7 +444,19 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 		break;
 
 		case ncChar:
+                {
+                        auto tValue = Time<char>();
+                        if (!theTVar->put(&tValue, 1)) return false;
+                }
+                break;
+
 		case ncByte:
+                {
+                        auto tValue = Time<int8_t>();
+                        if (!theTVar->put(&tValue, 1)) return false;
+                }
+                break;
+
 		case ncNoType:
 		default:
 			cout << "NcType not supported for data" << endl;
@@ -479,7 +497,18 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 				}
 				break;
 			case ncChar:
+				if (!(outprojvar = theOutFile.add_var(itsProjectionVar->name(), ncChar)))
+                                {
+                                        return false;
+                                }
+                                break;
 			case ncByte:
+				if (!(outprojvar = theOutFile.add_var(itsProjectionVar->name(), ncByte)))
+                                {
+                                        return false;
+                                }
+                                break;
+
 			case ncNoType:
 			default:
 				cout << "NcType not supported" << endl;
@@ -647,7 +676,38 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 		}
 
 		case ncChar:
+		{
+                        if (!(outvar = theOutFile.add_var(var->name(), ncChar, static_cast<char>(num_dims),
+                                                          const_cast<const NcDim**>(&dims[0]))))
+                        {
+                                return false;
+                        }
+
+                        auto char_data = Values<char>();
+                        if (!(outvar->put(&char_data[0], &cursor_position[0])))
+                        {
+                                return false;
+                        }
+
+                        break;
+		}
+
 		case ncByte:
+		{
+                        if (!(outvar = theOutFile.add_var(var->name(), ncByte, static_cast<int8_t>(num_dims),
+                                                          const_cast<const NcDim**>(&dims[0]))))
+                        {
+                                return false;
+                        }
+
+                        auto byte_data = Values<int8_t>();
+                        if (!(outvar->put(&byte_data[0], &cursor_position[0])))
+                        {
+                                return false;
+                        }
+
+                        break;
+		}
 		case ncNoType:
 		default:
 			cout << "NcType not supported" << endl;
@@ -707,7 +767,7 @@ void NFmiNetCDF::FlipY(bool theYFlip) { itsYFlip = theYFlip; }
 float NFmiNetCDF::XResolution()
 {
 	float x1 = itsXVar->as_float(0);
-	float x2 = itsXVar->as_float(1);
+	float x2 = itsXVar->as_float(SizeX()-1);
 
 	float delta = fabs(x2 - x1);
 	string units = Att(itsXVar, "units");
@@ -716,13 +776,13 @@ float NFmiNetCDF::XResolution()
 		if (units == "100  km") delta *= 100;
 	}
 
-	return delta;
+	return delta/(SizeX()-1);
 }
 
 float NFmiNetCDF::YResolution()
 {
 	float y1 = itsYVar->as_float(0);
-	float y2 = itsYVar->as_float(1);
+	float y2 = itsYVar->as_float(SizeY()-1);
 
 	float delta = fabs(y2 - y1);
 	string units = Att(itsYVar, "units");
@@ -731,7 +791,7 @@ float NFmiNetCDF::YResolution()
 		if (units == "100  km") delta *= 100;
 	}
 
-	return delta;
+	return delta/(SizeY()-1);
 }
 
 bool NFmiNetCDF::CoordinatesInRowMajorOrder(const NcVar* var)
@@ -847,7 +907,7 @@ vector<T> NFmiNetCDF::Values(NcVar* var, long timeIndex, long levelIndex)
 
 	var->set_cur(&cursor_position[0]);
 
-	vector<T> values(itsXDim->size() * itsYDim->size(), kFloatMissing);
+	vector<T> values(itsXDim->size() * itsYDim->size(), static_cast<T>(kFloatMissing));
 	var->get(&values[0], &dimsizes[0]);
 
 	return values;
@@ -1121,7 +1181,11 @@ bool CopyAtts(NcVar* newvar, NcVar* oldvar)
 					if (!newvar->add_att(att->name(), att->as_int(0))) return false;
 					break;
 				case ncChar:
+					if (!newvar->add_att(att->name(), att->as_char(0))) return false;
+					break;
 				case ncByte:
+					if (!newvar->add_att(att->name(), att->as_ncbyte(0))) return false;
+					break;
 				case ncNoType:
 				default:
 					cout << "NcType not supported for Var" << endl;
