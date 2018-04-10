@@ -1,7 +1,7 @@
 %define LIBNAME fminc
 Summary: fminc library
 Name: lib%{LIBNAME}
-Version: 18.3.13
+Version: 18.4.10
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -11,7 +11,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Provides: %{LIBNAME}
 BuildRequires: netcdf-devel >= 4.1.1
 BuildRequires: netcdf-cxx-devel
-BuildRequires: boost-devel
+BuildRequires: boost-devel >= 1.66
 Requires: boost-filesystem
 
 %description
@@ -56,7 +56,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/*.h
 
 %changelog
-* Tue Mar 13 2018 Mikko Partio <mikko.partio@fmi.fi> - 19.3.13-1.fmi
+* Tue Apr 10 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.10-1.fmi
+- New boost
+* Tue Mar 13 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.13-1.fmi
 - Change calculation of grid resolution
 * Wed Aug 30 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.8.30-1.fmi
 - New boost
