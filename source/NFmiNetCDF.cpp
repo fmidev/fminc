@@ -243,6 +243,12 @@ NcVar* NFmiNetCDF::GetVariable(const string& varName) const
 	throw out_of_range("Variable '" + varName + "' does not exist");
 }
 
+bool NFmiNetCDF::HasVariable(const string& name) const
+{
+	NcVar* var = itsDataFile->get_var(name.c_str());
+	return var == nullptr ? false : true;
+}
+
 bool NFmiNetCDF::WriteSliceToCSV(const string& theFileName)
 {
 	ofstream theOutFile;
@@ -776,7 +782,7 @@ float NFmiNetCDF::XResolution()
 		if (units == "100  km") delta *= 100;
 	}
 
-	return delta/(SizeX()-1);
+	return delta / static_cast<float>((SizeX()-1));
 }
 
 float NFmiNetCDF::YResolution()
@@ -791,7 +797,7 @@ float NFmiNetCDF::YResolution()
 		if (units == "100  km") delta *= 100;
 	}
 
-	return delta/(SizeY()-1);
+	return delta / static_cast<float>((SizeY()-1));
 }
 
 bool NFmiNetCDF::CoordinatesInRowMajorOrder(const NcVar* var)
@@ -1028,7 +1034,6 @@ bool NFmiNetCDF::ReadVariables()
 					{
 						cerr << "X dimension resolution is not constant, diff: " << (prevResolution - resolution)
 						     << endl;
-						return false;
 					}
 
 					prevResolution = resolution;
@@ -1067,7 +1072,6 @@ bool NFmiNetCDF::ReadVariables()
 					{
 						cerr << "Y dimension resolution is not constant, diff: " << (prevResolution - resolution)
 						     << endl;
-						return false;
 					}
 
 					prevResolution = resolution;
