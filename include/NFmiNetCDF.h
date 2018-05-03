@@ -60,6 +60,12 @@ class NFmiNetCDF
 	template <typename T>
 	T Y1();
 
+	template <typename T>
+	T Lat0();
+
+	template <typename T>
+	T Lon0();
+
 	float Orientation() const;
 	std::string Projection() const;
 	float TrueLatitude();
@@ -84,6 +90,7 @@ class NFmiNetCDF
 	float YResolution();
 
 	NcVar* GetVariable(const std::string& varName) const;
+	bool HasVariable(const std::string& name) const;
 	bool CoordinatesInRowMajorOrder(const NcVar* var);
 
 	bool HasDimension(const std::string& dimName);
@@ -129,6 +136,30 @@ class NFmiNetCDF
 	long itsTimeIndex;
 	long itsLevelIndex;
 };
+
+template <typename T>
+T NFmiNetCDF::Lat0()
+{
+	T ret = kFloatMissing;
+	auto latVar = itsDataFile->get_var("latitude");
+	if (latVar)
+	{
+		ret = latVar->as_float(0);
+	}
+	return ret;
+}
+
+template <typename T>
+T NFmiNetCDF::Lon0()
+{
+	T ret = kFloatMissing;
+	auto lonVar = itsDataFile->get_var("longitude");
+	if (lonVar)
+	{
+		ret = lonVar->as_float(0);
+	}
+	return ret;
+}
 
 template <typename T>
 T NFmiNetCDF::X0()
