@@ -25,7 +25,7 @@ LDFLAGS = -shared
 
 # Special modes
 
-CFLAGS_DEBUG = -fPIC -std=c++0x -DUNIX -O0 -g -DDEBUG $(MAINFLAGS) $(EXTRAFLAGS)
+CFLAGS_DEBUG = -fPIC -std=c++11 -DUNIX -O0 -ggdb -DDEBUG $(MAINFLAGS) $(EXTRAFLAGS)
 
 LDFLAGS_DEBUG = -shared -Wl,-soname,lib$(LIB).so
 

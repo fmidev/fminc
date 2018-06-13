@@ -20,11 +20,13 @@ NFmiNetCDF::NFmiNetCDF()
       itsXDim(0),
       itsYDim(0),
       itsZDim(0),
+      itsMDim(0),
       itsProjection("latitude_longitude"),
       itsZVar(0),
       itsXVar(0),
       itsYVar(0),
       itsTVar(0),
+      itsMVar(0),
       itsProjectionVar(0),
       itsXFlip(false),
       itsYFlip(false)
@@ -36,11 +38,13 @@ NFmiNetCDF::NFmiNetCDF(const string& theInfile)
       itsXDim(0),
       itsYDim(0),
       itsZDim(0),
+      itsMDim(0),
       itsProjection("latitude_longitude"),
       itsZVar(0),
       itsXVar(0),
       itsYVar(0),
       itsTVar(0),
+      itsMVar(0),
       itsProjectionVar(0),
       itsXFlip(false),
       itsYFlip(false)
@@ -290,8 +294,8 @@ bool NFmiNetCDF::WriteSliceToCSV(const string& theFileName)
 
 bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 {
-	NcDim *theXDim = 0, *theYDim = 0, *theZDim = 0, *theTDim = 0;
-	NcVar *theXVar = 0, *theYVar = 0, *theZVar = 0, *theTVar = 0, *outvar = 0;
+	NcDim *theXDim = 0, *theYDim = 0, *theZDim = 0, *theTDim = 0, *theMDim = 0;
+	NcVar *theXVar = 0, *theYVar = 0, *theZVar = 0, *theTVar = 0, *theMVar = 0, *outvar = 0;
 
 	boost::filesystem::path f(theFileName);
 	string dir = f.parent_path().string();
@@ -330,6 +334,13 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 
 	if (itsTDim)
 		if (!(theTDim = theOutFile.add_dim(itsTDim->name()))) return false;
+
+	// ensemble member dimension
+	if (itsMDim)
+	{
+		const size_t sizeM = itsMDim->size();
+		if (!(theMDim = theOutFile.add_dim(itsMDim->name(), sizeM))) return false;
+	}
 
 	// Variables
 
@@ -468,6 +479,20 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 			cout << "NcType not supported for data" << endl;
 	}
 
+	// ensemble member variable
+	if (itsMDim && theMDim)
+	{
+		if (!(theMVar = theOutFile.add_var(itsMDim->name(), ncShort, theMDim))) return false;
+	}
+	CopyAtts(theMVar, itsMVar);
+
+	const long sizeM = itsMDim->size();
+	auto mValues = Values<short>(itsMVar);
+	if (!theMVar->put(mValues.data(), sizeM))
+	{
+		return false;
+	}
+
 	// Add projection variable if it exists
 
 	if (itsProjectionVar)
@@ -522,14 +547,13 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 		CopyAtts(outprojvar, itsProjectionVar);
 
 		// Check if "longitude" and "latitude" variables exist
-
-		NcVar *outlon = 0, *outlat = 0;
-
 		NcVar* lon = itsDataFile->get_var("longitude");
 		NcVar* lat = itsDataFile->get_var("latitude");
 
 		if (itsProjection == "polar_stereographic" && lon && lat)
 		{
+			NcVar *outlon = 0, *outlat = 0;
+
 			// get dims
 			vector<NcDim*> dims;
 			assert(lon->num_dims() == lat->num_dims());
@@ -612,19 +636,26 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 			dims[i] = theYDim;
 			cursor_position[i] = itsYDim->size();
 		}
+		else if (dimname == itsMDim->name())
+		{
+			dims[i] = theMDim;
+			cursor_position[i] = 1;
+		}
 	}
 
 	switch (var->type())
 	{
 		case ncFloat:
 		{
-			if (!(outvar = theOutFile.add_var(var->name(), ncFloat, static_cast<int>(num_dims),
-			                                  const_cast<const NcDim**>(&dims[0]))))
+			const string name = var->name();
+			if (!(outvar = theOutFile.add_var(name.c_str(), ncFloat, static_cast<int>(num_dims),
+			                                 const_cast<const NcDim**>(&dims[0]))))
 			{
 				return false;
 			}
 
 			auto float_data = Values<float>();
+
 			if (!(outvar->put(&float_data[0], &cursor_position[0])))
 			{
 				return false;
@@ -714,7 +745,7 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 
                         break;
 		}
-		case ncNoType:
+	case ncNoType:
 		default:
 			cout << "NcType not supported" << endl;
 			return false;
@@ -724,8 +755,8 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 	CopyAtts(outvar, var);
 
 #ifndef NDEBUG
-	auto att = unique_ptr<NcAtt>(outvar->get_att("_FillValue"));
-	assert(att->type() == outvar->type());
+ 	auto att = unique_ptr<NcAtt>(outvar->get_att("_FillValue"));
+ 	assert(att->type() == outvar->type());
 #endif
 
 	// Global attributes
@@ -846,6 +877,8 @@ bool NFmiNetCDF::HasDimension(const NcVar* var, const std::string& dimName)
 			dimname = itsXDim->name();
 		else if (dimName == "y")
 			dimname = itsYDim->name();
+		else if (dimName == "ensemble_member" || dimName == "member")
+			dimname = itsMDim->name();
 
 		if (static_cast<string>(dim->name()) == dimname) return true;
 	}
@@ -884,11 +917,11 @@ vector<T> NFmiNetCDF::Values(NcVar* var)
 template <typename T>
 vector<T> NFmiNetCDF::Values(NcVar* var, long timeIndex, long levelIndex)
 {
-	long num_dims = var->num_dims();
+	int num_dims = static_cast<size_t>(var->num_dims());
 
 	vector<long> cursor_position(num_dims), dimsizes(num_dims);
 
-	for (unsigned short i = 0; i < num_dims; i++)
+	for (int i = 0; i < num_dims; i++)
 	{
 		NcDim* dim = var->get_dim(i);
 		string dimname = static_cast<string>(dim->name());
@@ -904,7 +937,7 @@ vector<T> NFmiNetCDF::Values(NcVar* var, long timeIndex, long levelIndex)
 		else if (levelIndex != -1 && itsZDim && dimname == itsZDim->name())
 		{
 			index = levelIndex;
-			dimsize = 1;
+			dimsize = 1; // XXX METAN has dimsize == 2, (y, x)
 		}
 
 		cursor_position[i] = index;
@@ -913,8 +946,9 @@ vector<T> NFmiNetCDF::Values(NcVar* var, long timeIndex, long levelIndex)
 
 	var->set_cur(&cursor_position[0]);
 
-	vector<T> values(itsXDim->size() * itsYDim->size(), static_cast<T>(kFloatMissing));
-	var->get(&values[0], &dimsizes[0]);
+	size_t dims = std::accumulate(dimsizes.begin(), dimsizes.end(), 1, [](long a, long b) { return a * b; });
+	vector<T> values(dims, static_cast<T>(kFloatMissing));
+	var->get(values.data(), dimsizes.data());
 
 	return values;
 }
@@ -960,6 +994,11 @@ bool NFmiNetCDF::ReadDimensions()
 		if (name == "level" || name == "lev" || name == "depth" || name == "pressure" || name == "height")
 		{
 			itsZDim = dim;
+		}
+
+		if (name == "ensemble_member" || name == "member")
+		{
+			itsMDim = dim;
 		}
 	}
 
@@ -1091,6 +1130,13 @@ bool NFmiNetCDF::ReadVariables()
 			 */
 
 			itsTVar = var;
+
+			continue;
+		}
+		else if (itsMDim && varname == static_cast<string>(itsMDim->name()))
+		{
+			// METNO has ensemble member as dimension and variable.
+			itsMVar = var;
 
 			continue;
 		}
