@@ -114,6 +114,7 @@ class NFmiNetCDF
 	NcDim* itsXDim;
 	NcDim* itsYDim;
 	NcDim* itsZDim;
+	NcDim* itsMDim;
 
 	std::unique_ptr<NcFile> itsDataFile;
 
@@ -127,6 +128,7 @@ class NFmiNetCDF
 	NcVar* itsXVar;
 	NcVar* itsYVar;
 	NcVar* itsTVar;
+	NcVar* itsMVar;
 	NcVar* itsProjectionVar;
 
 	bool itsXFlip;
@@ -144,7 +146,7 @@ T NFmiNetCDF::Lat0()
 	auto latVar = itsDataFile->get_var("latitude");
 	if (latVar)
 	{
-		ret = latVar->as_float(0);
+		ret = static_cast<T>(latVar->as_float(0));
 	}
 	return ret;
 }
@@ -156,7 +158,7 @@ T NFmiNetCDF::Lon0()
 	auto lonVar = itsDataFile->get_var("longitude");
 	if (lonVar)
 	{
-		ret = lonVar->as_float(0);
+		ret = static_cast<T>(lonVar->as_float(0));
 	}
 	return ret;
 }
