@@ -480,19 +480,20 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 	}
 
 	// ensemble member variable
+
 	if (itsMDim && theMDim)
 	{
 		if (!(theMVar = theOutFile.add_var(itsMDim->name(), ncShort, theMDim))) return false;
-	}
-	CopyAtts(theMVar, itsMVar);
 
-	const long sizeM = itsMDim->size();
-	auto mValues = Values<short>(itsMVar);
-	if (!theMVar->put(mValues.data(), sizeM))
-	{
-		return false;
-	}
+		CopyAtts(theMVar, itsMVar);
 
+		const long sizeM = itsMDim->size();
+		auto mValues = Values<short>(itsMVar);
+		if (!theMVar->put(mValues.data(), sizeM))
+		{
+		    return false;
+		}
+	}
 	// Add projection variable if it exists
 
 	if (itsProjectionVar)
