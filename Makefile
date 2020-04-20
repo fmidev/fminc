@@ -30,8 +30,7 @@ CFLAGS_DEBUG = -fPIC -std=c++11 -DUNIX -O0 -ggdb -DDEBUG $(MAINFLAGS) $(EXTRAFLA
 LDFLAGS_DEBUG = -shared -Wl,-soname,lib$(LIB).so
 
 INCLUDES = -I include \
-           -I$(includedir) \
-           -I$(includedir)/netcdf-3
+           -I/usr/include/boost169
 
 ifneq ($(INCLUDE), "")
   INCLUDES := $(INCLUDES) \

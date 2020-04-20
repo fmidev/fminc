@@ -1,7 +1,7 @@
 %define LIBNAME fminc
 Summary: fminc library
 Name: lib%{LIBNAME}
-Version: 18.8.24
+Version: 20.4.20
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -11,8 +11,8 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Provides: %{LIBNAME}
 BuildRequires: netcdf-devel >= 4.1.1
 BuildRequires: netcdf-cxx-devel
-BuildRequires: boost-devel >= 1.66
-Requires: boost-filesystem
+BuildRequires: boost169-devel >= 1.66
+Requires: boost169-filesystem
 
 %description
 FMI netcdf library
@@ -56,6 +56,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/*.h
 
 %changelog
+* Mon Apr 20 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.20-1.fmi
+- boost 1.69
 * Fri Aug 24 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.24-1.fmi
 - Bugfixes
 * Wed Aug 22 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.22-1.fmi
