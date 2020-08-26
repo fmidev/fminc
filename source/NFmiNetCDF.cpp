@@ -1029,8 +1029,7 @@ bool NFmiNetCDF::ReadVariables()
 	{
 		NcVar* var = itsDataFile->get_var(i);
 
-		const string varname = var->name();
-		const string standard_name = Att(var, "standard_name");
+		string varname = var->name();
 
 		if (itsZDim && varname == static_cast<string>(itsZDim->name()))
 		{
@@ -1046,7 +1045,7 @@ bool NFmiNetCDF::ReadVariables()
 
 			continue;
 		}
-		else if (varname == static_cast<string>(itsXDim->name()) || standard_name == "longitude")
+		else if (varname == static_cast<string>(itsXDim->name()))
 		{
 			// X-coordinate
 
@@ -1084,7 +1083,7 @@ bool NFmiNetCDF::ReadVariables()
 
 			continue;
 		}
-		else if (varname == static_cast<string>(itsYDim->name()) || standard_name == "latitude")
+		else if (varname == static_cast<string>(itsYDim->name()))
 		{
 			// Y-coordinate
 
