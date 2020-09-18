@@ -8,6 +8,7 @@
 #include <netcdfcpp.h>
 #include <string>
 #include <vector>
+#include <cassert>
 
 class NFmiNetCDF
 {
@@ -175,6 +176,7 @@ T NFmiNetCDF::X0()
 	}
 	else
 	{
+		assert(itsXVar);
 		ret = static_cast<T>(itsXVar->as_float(0));
 	}
 	return ret;
@@ -195,6 +197,7 @@ T NFmiNetCDF::Y0()
 	}
 	else
 	{
+		assert(itsYVar);
 		ret = static_cast<T>(itsYVar->as_float(0));
 	}
 	return ret;
@@ -215,6 +218,7 @@ T NFmiNetCDF::X1()
 	}
 	else
 	{
+		assert(itsXVar);
 		ret = static_cast<T>(itsXVar->as_float(itsXVar->num_vals() - 1));
 	}
 	return ret;
@@ -235,6 +239,7 @@ T NFmiNetCDF::Y1()
 	}
 	else
 	{
+		assert(itsYVar);
 		ret = static_cast<T>(itsYVar->as_float(itsYVar->num_vals() - 1));
 	}
 	return ret;
