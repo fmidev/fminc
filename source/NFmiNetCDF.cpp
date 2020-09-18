@@ -1045,7 +1045,7 @@ bool NFmiNetCDF::ReadVariables()
 
 			continue;
 		}
-		else if (varname == static_cast<string>(itsXDim->name()))
+		else if (varname == static_cast<string>(itsXDim->name()) || Att(var, "standard_name") == "longitude")
 		{
 			// X-coordinate
 
@@ -1083,7 +1083,7 @@ bool NFmiNetCDF::ReadVariables()
 
 			continue;
 		}
-		else if (varname == static_cast<string>(itsYDim->name()))
+		else if (varname == static_cast<string>(itsYDim->name()) || Att(var, "standard_name") == "latitude")
 		{
 			// Y-coordinate
 
@@ -1168,6 +1168,8 @@ bool NFmiNetCDF::ReadVariables()
 
 		itsParameters.push_back(var);
 	}
+
+	assert(itsXVar && itsYVar && itsTVar);
 
 	return true;
 }
