@@ -15,6 +15,7 @@ using namespace std;
 
 bool CopyAtts(NcVar* newvar, const NcVar* oldvar);
 bool CopyVar(NcVar** newvar, const NcVar* oldvar, NcFile* theOutFile, long* dimpos);
+vector<pair<string, string>> ReadGlobalAttributes(NcFile* theFile);
 
 template <typename T>
 vector<T> Values(const NcVar* var, long* edges = 0)
@@ -33,7 +34,7 @@ vector<T> Values(const NcVar* var, long* edges = 0)
 	assert(ret);
 	if (allocated)
 	{
-		delete edges;
+		delete[] edges;
 	}
 
 	return values;
@@ -670,6 +671,13 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 
 	// Global attributes
 
+	const auto atts = ReadGlobalAttributes(itsDataFile.get());
+
+	for (const auto& p : atts)
+	{
+		theOutFile.add_att(p.first.c_str(), p.second.c_str());
+	}
+
 	if (!itsConvention.empty())
 	{
 		if (!theOutFile.add_att("Conventions", itsConvention.c_str()))
@@ -1127,6 +1135,20 @@ bool NFmiNetCDF::ReadVariables()
 	return true;
 }
 
+vector<pair<string, string>> ReadGlobalAttributes(NcFile* theFile)
+{
+	vector<pair<string, string>> ret;
+
+	for (int i = 0; i < theFile->num_atts(); i++)
+	{
+		const NcAtt* att = theFile->get_att(i);
+
+		ret.emplace_back(att->name(), string(att->as_string(0)));
+	}
+
+	return ret;
+}
+
 bool NFmiNetCDF::ReadAttributes()
 {
 	/*
@@ -1138,17 +1160,13 @@ bool NFmiNetCDF::ReadAttributes()
 	 * be overwritten by command line options.
 	 */
 
-	for (int i = 0; i < itsDataFile->num_atts(); i++)
+	auto atts = ReadGlobalAttributes(itsDataFile.get());
+
+	for (const auto& p : atts)
 	{
-		auto att = unique_ptr<NcAtt>(itsDataFile->get_att(i));
-
-		string name = att->name();
-
-		if (name == "Conventions" && att->type() == ncChar)
+		if (p.first == "Conventions")
 		{
-			const char* s = att->as_string(0);
-			itsConvention = string(s);
-			delete[] s;
+			itsConvention = p.second;
 		}
 	}
 
