@@ -1,7 +1,7 @@
 %define LIBNAME fminc
 Summary: fminc library
 Name: lib%{LIBNAME}
-Version: 20.4.27
+Version: 20.9.22
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -56,6 +56,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/*.h
 
 %changelog
+* Tue Sep 22 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.22-1.fmi
+- Refactoring
 * Mon Apr 27 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.27-1.fmi
 - Check standard name for longitude and latitude vars
 * Mon Apr 20 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.20-1.fmi
