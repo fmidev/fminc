@@ -4,11 +4,11 @@
  * General library to access NetCDF files.
  */
 
+#include <cassert>
 #include <memory>
 #include <netcdfcpp.h>
 #include <string>
 #include <vector>
-#include <cassert>
 
 class NFmiNetCDF
 {
@@ -102,9 +102,6 @@ class NFmiNetCDF
 	std::string Att(NcVar* var, const std::string& attName);
 
 	template <typename T>
-	std::vector<T> Values(NcVar* var);
-
-	template <typename T>
 	std::vector<T> Values(NcVar* var, long timeIndex, long levelIndex = -1);
 
 	bool ReadDimensions();
@@ -172,7 +169,8 @@ T NFmiNetCDF::X0()
 	if (Projection() == "polar_stereographic")
 	{
 		auto lonVar = itsDataFile->get_var("longitude");
-		if (lonVar) ret = lonVar->as_float(0);
+		if (lonVar)
+			ret = lonVar->as_float(0);
 	}
 	else
 	{
@@ -193,7 +191,8 @@ T NFmiNetCDF::Y0()
 	if (Projection() == "polar_stereographic")
 	{
 		auto latVar = itsDataFile->get_var("latitude");
-		if (latVar) ret = static_cast<T>(latVar->as_float(0));
+		if (latVar)
+			ret = static_cast<T>(latVar->as_float(0));
 	}
 	else
 	{
@@ -214,7 +213,8 @@ T NFmiNetCDF::X1()
 	if (Projection() == "polar_stereographic")
 	{
 		auto lonVar = itsDataFile->get_var("longitude");
-		if (lonVar) ret = lonVar->as_float(lonVar->num_vals() - 1);
+		if (lonVar)
+			ret = lonVar->as_float(lonVar->num_vals() - 1);
 	}
 	else
 	{
@@ -235,7 +235,8 @@ T NFmiNetCDF::Y1()
 	if (Projection() == "polar_stereographic")
 	{
 		auto latVar = itsDataFile->get_var("latitude");
-		if (latVar) ret = static_cast<T>(latVar->as_float(latVar->num_vals() - 1));
+		if (latVar)
+			ret = static_cast<T>(latVar->as_float(latVar->num_vals() - 1));
 	}
 	else
 	{

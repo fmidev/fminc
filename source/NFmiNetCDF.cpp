@@ -11,9 +11,33 @@
 const float MAX_COORDINATE_RESOLUTION_ERROR = 1e-4f;
 const float NFmiNetCDF::kFloatMissing = 32700.0f;
 
-bool CopyAtts(NcVar* newvar, NcVar* oldvar);
-
 using namespace std;
+
+bool CopyAtts(NcVar* newvar, const NcVar* oldvar);
+bool CopyVar(NcVar** newvar, const NcVar* oldvar, NcFile* theOutFile, long* dimpos);
+
+template <typename T>
+vector<T> Values(const NcVar* var, long* edges = 0)
+{
+	vector<T> values(var->num_vals(), NFmiNetCDF::kFloatMissing);
+
+	bool allocated = false;
+	if (edges == 0)
+	{
+		allocated = true;
+		edges = var->edges();
+	}
+
+	NcBool ret = var->get(values.data(), edges);
+
+	assert(ret);
+	if (allocated)
+	{
+		delete edges;
+	}
+
+	return values;
+}
 
 NFmiNetCDF::NFmiNetCDF()
     : itsTDim(0),
@@ -52,7 +76,10 @@ NFmiNetCDF::NFmiNetCDF(const string& theInfile)
 	Read(theInfile);
 }
 
-NFmiNetCDF::~NFmiNetCDF() { itsDataFile->close(); }
+NFmiNetCDF::~NFmiNetCDF()
+{
+	itsDataFile->close();
+}
 bool NFmiNetCDF::Read(const string& theInfile)
 {
 	itsDataFile = unique_ptr<NcFile>(new NcFile(theInfile.c_str(), NcFile::ReadOnly));
@@ -64,11 +91,14 @@ bool NFmiNetCDF::Read(const string& theInfile)
 
 	// Read metadata from file.
 
-	if (!ReadAttributes()) return false;
+	if (!ReadAttributes())
+		return false;
 
-	if (!ReadDimensions()) return false;
+	if (!ReadDimensions())
+		return false;
 
-	if (!ReadVariables()) return false;
+	if (!ReadVariables())
+		return false;
 
 	if (itsParameters.size() == 0)
 	{
@@ -93,82 +123,127 @@ bool NFmiNetCDF::Read(const string& theInfile)
 long int NFmiNetCDF::SizeX() const
 {
 	long ret = 0;
-	if (itsXDim) ret = itsXDim->size();
+	if (itsXDim)
+		ret = itsXDim->size();
 	return ret;
 }
 
 long int NFmiNetCDF::SizeY() const
 {
 	long ret = 0;
-	if (itsYDim) ret = itsYDim->size();
+	if (itsYDim)
+		ret = itsYDim->size();
 	return ret;
 }
 
 long int NFmiNetCDF::SizeZ() const
 {
 	long ret = 0;
-	if (itsZDim) ret = itsZDim->size();
+	if (itsZDim)
+		ret = itsZDim->size();
 	return ret;
 }
 
 long int NFmiNetCDF::SizeT() const
 {
 	long ret = 0;
-	if (itsTDim) ret = itsTDim->size();
+	if (itsTDim)
+		ret = itsTDim->size();
 	return ret;
 }
 
-long int NFmiNetCDF::SizeParams() const { return itsParameters.size(); }
+long int NFmiNetCDF::SizeParams() const
+{
+	return itsParameters.size();
+}
 // Types
-nc_type NFmiNetCDF::TypeX() const { return itsXVar->type(); }
-nc_type NFmiNetCDF::TypeY() const { return itsYVar->type(); }
-nc_type NFmiNetCDF::TypeZ() const { return itsZVar->type(); }
-nc_type NFmiNetCDF::TypeT() const { return itsTVar->type(); }
+nc_type NFmiNetCDF::TypeX() const
+{
+	return itsXVar->type();
+}
+nc_type NFmiNetCDF::TypeY() const
+{
+	return itsYVar->type();
+}
+nc_type NFmiNetCDF::TypeZ() const
+{
+	return itsZVar->type();
+}
+nc_type NFmiNetCDF::TypeT() const
+{
+	return itsTVar->type();
+}
 // Metadata
-bool NFmiNetCDF::IsConvention() const { return (!itsConvention.empty()); }
-string NFmiNetCDF::Convention() const { return itsConvention; }
+bool NFmiNetCDF::IsConvention() const
+{
+	return (!itsConvention.empty());
+}
+string NFmiNetCDF::Convention() const
+{
+	return itsConvention;
+}
 float NFmiNetCDF::Orientation() const
 {
 	float ret = kFloatMissing;
 
 	NcVar* var = itsDataFile->get_var("stereographic");
 
-	if (!var) return ret;
+	if (!var)
+		return ret;
 
 	auto att = unique_ptr<NcAtt>(var->get_att("longitude_of_projection_origin"));
 
-	if (!att) return ret;
+	if (!att)
+		return ret;
 
 	return att->as_float(0);
 }
 
-std::string NFmiNetCDF::Projection() const { return itsProjection; }
+std::string NFmiNetCDF::Projection() const
+{
+	return itsProjection;
+}
 
 float NFmiNetCDF::TrueLatitude()
 {
-        float ret = kFloatMissing;
+	float ret = kFloatMissing;
 
-        NcVar* var = itsDataFile->get_var("stereographic");
+	NcVar* var = itsDataFile->get_var("stereographic");
 
-        if (!var) return ret;
+	if (!var)
+		return ret;
 
-        auto att = unique_ptr<NcAtt>(var->get_att("latitude_of_projection_origin"));
+	auto att = unique_ptr<NcAtt>(var->get_att("latitude_of_projection_origin"));
 
-        if (!att) return ret;
+	if (!att)
+		return ret;
 
-        return att->as_float(0);
+	return att->as_float(0);
 }
 
 // Params
-void NFmiNetCDF::FirstParam() { itsParamIterator = itsParameters.begin(); }
-bool NFmiNetCDF::NextParam() { return (++itsParamIterator < itsParameters.end()); }
-NcVar* NFmiNetCDF::Param() { return *itsParamIterator; }
+void NFmiNetCDF::FirstParam()
+{
+	itsParamIterator = itsParameters.begin();
+}
+bool NFmiNetCDF::NextParam()
+{
+	return (++itsParamIterator < itsParameters.end());
+}
+NcVar* NFmiNetCDF::Param()
+{
+	return *itsParamIterator;
+}
 // Time
-void NFmiNetCDF::ResetTime() { itsTimeIndex = -1; }
+void NFmiNetCDF::ResetTime()
+{
+	itsTimeIndex = -1;
+}
 bool NFmiNetCDF::NextTime()
 {
 	itsTimeIndex++;
-	if (itsTimeIndex < SizeT()) return true;
+	if (itsTimeIndex < SizeT())
+		return true;
 
 	return false;
 }
@@ -191,15 +266,25 @@ template short NFmiNetCDF::Time<short>();
 template char NFmiNetCDF::Time<char>();
 template int8_t NFmiNetCDF::Time<int8_t>();
 
-long NFmiNetCDF::TimeIndex() { return itsTimeIndex; }
-string NFmiNetCDF::TimeUnit() { return Att(itsTVar, "units"); }
+long NFmiNetCDF::TimeIndex()
+{
+	return itsTimeIndex;
+}
+string NFmiNetCDF::TimeUnit()
+{
+	return Att(itsTVar, "units");
+}
 // Level
-void NFmiNetCDF::ResetLevel() { itsLevelIndex = -1; }
+void NFmiNetCDF::ResetLevel()
+{
+	itsLevelIndex = -1;
+}
 bool NFmiNetCDF::NextLevel()
 {
 	itsLevelIndex++;
 
-	if (itsLevelIndex < SizeZ()) return true;
+	if (itsLevelIndex < SizeZ())
+		return true;
 
 	return false;
 }
@@ -214,7 +299,10 @@ float NFmiNetCDF::Level()
 	return val;
 }
 
-long NFmiNetCDF::LevelIndex() { return itsLevelIndex; }
+long NFmiNetCDF::LevelIndex()
+{
+	return itsLevelIndex;
+}
 template <typename T>
 vector<T> NFmiNetCDF::Values(std::string theParameter)
 {
@@ -242,7 +330,8 @@ NcVar* NFmiNetCDF::GetVariable(const string& varName) const
 {
 	for (unsigned int i = 0; i < itsParameters.size(); i++)
 	{
-		if (string(itsParameters[i]->name()) == varName) return itsParameters[i];
+		if (string(itsParameters[i]->name()) == varName)
+			return itsParameters[i];
 	}
 	throw out_of_range("Variable '" + varName + "' does not exist");
 }
@@ -258,13 +347,15 @@ bool NFmiNetCDF::WriteSliceToCSV(const string& theFileName)
 	ofstream theOutFile;
 	theOutFile.open(theFileName.c_str());
 
-	auto Xs = Values<float>(itsXVar);
+	auto Xs = ::Values<float>(itsXVar);
 
-	if (itsXFlip) reverse(Xs.begin(), Xs.end());
+	if (itsXFlip)
+		reverse(Xs.begin(), Xs.end());
 
-	auto Ys = Values<float>(itsYVar);
+	auto Ys = ::Values<float>(itsYVar);
 
-	if (itsYFlip) reverse(Ys.begin(), Ys.end());
+	if (itsYFlip)
+		reverse(Ys.begin(), Ys.end());
 
 	auto values = Values<float>();
 
@@ -319,64 +410,53 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 
 	// Dimensions
 
-	if (!(theXDim = theOutFile.add_dim(itsXDim->name(), SizeX()))) return false;
+	if (!(theXDim = theOutFile.add_dim(itsXDim->name(), SizeX())))
+		return false;
 
-	if (!(theYDim = theOutFile.add_dim(itsYDim->name(), SizeY()))) return false;
+	if (!(theYDim = theOutFile.add_dim(itsYDim->name(), SizeY())))
+		return false;
 
 	// Add z dimension if it exists in the original data
 
 	if (itsZDim)
 	{
-		if (!(theZDim = theOutFile.add_dim(itsZDim->name(), 1))) return false;
+		if (!(theZDim = theOutFile.add_dim(itsZDim->name(), 1)))
+			return false;
 	}
 
 	// Our unlimited dimension
 
 	if (itsTDim)
-		if (!(theTDim = theOutFile.add_dim(itsTDim->name()))) return false;
+		if (!(theTDim = theOutFile.add_dim(itsTDim->name())))
+			return false;
 
 	// ensemble member dimension
 	if (itsMDim)
 	{
 		const size_t sizeM = itsMDim->size();
-		if (!(theMDim = theOutFile.add_dim(itsMDim->name(), sizeM))) return false;
+		if (!(theMDim = theOutFile.add_dim(itsMDim->name(), sizeM)))
+			return false;
 	}
 
 	// Variables
 
 	// x
 
-	if (!(theXVar = theOutFile.add_var(itsXVar->name(), ncFloat, theXDim))) return false;
+	if (!CopyVar(&theXVar, itsXVar, &theOutFile, nullptr))
+	{
+		return false;
+	}
 
-	CopyAtts(theXVar, itsXVar);
+	/*
+	    if (itsXFlip) reverse(xValues.begin(), xValues.end());
 
-	// Put coordinate data
-
-	// Flip x values if requested
-
-	assert(itsXVar);
-	auto xValues = Values<float>(itsXVar);
-
-	if (itsXFlip) reverse(xValues.begin(), xValues.end());
-
-	if (!theXVar->put(&xValues[0], SizeX())) return false;
-
+	*/
 	// y
 
-	if (!(theYVar = theOutFile.add_var(itsYVar->name(), ncFloat, theYDim))) return false;
-
-	CopyAtts(theYVar, itsYVar);
-
-	// Put coordinate data
-
-	// Flip y values if requested
-
-	assert(itsYVar);
-	auto yValues = Values<float>(itsYVar);
-
-	if (itsYFlip) reverse(yValues.begin(), yValues.end());
-
-	if (!theYVar->put(&yValues[0], SizeY())) return false;
+	if (!CopyVar(&theYVar, itsYVar, &theOutFile, nullptr))
+	{
+		return false;
+	}
 
 	// z
 
@@ -396,104 +476,45 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 
 		auto zValue = Level();
 
-		if (zValue == kFloatMissing) zValue = 0;
+		if (zValue == kFloatMissing)
+			zValue = 0;
 
-		if (!theZVar->put(&zValue, 1)) return false;
+		if (!theZVar->put(&zValue, 1))
+			return false;
 	}
 
 	// t
 
-	switch (itsTVar->type())
+	long time_index = TimeIndex();
+
+	if (!CopyVar(&theTVar, itsTVar, &theOutFile, &time_index))
 	{
-		case ncFloat:
-			if (!(theTVar = theOutFile.add_var(itsTDim->name(), ncFloat, theTDim))) return false;
-			break;
-		case ncDouble:
-			if (!(theTVar = theOutFile.add_var(itsTDim->name(), ncDouble, theTDim))) return false;
-			break;
-		case ncShort:
-			if (!(theTVar = theOutFile.add_var(itsTDim->name(), ncShort, theTDim))) return false;
-			break;
-		case ncInt:
-			if (!(theTVar = theOutFile.add_var(itsTDim->name(), ncInt, theTDim))) return false;
-			break;
-		case ncChar:
-                        if (!(theTVar = theOutFile.add_var(itsTDim->name(), ncChar, theTDim))) return false;
-                        break;
-		case ncByte:
-                        if (!(theTVar = theOutFile.add_var(itsTDim->name(), ncByte, theTDim))) return false;
-                        break;
-		case ncNoType:
-		default:
-			cout << "NcType not supported for Time" << endl;
-	}
-
-	CopyAtts(theTVar, itsTVar);
-
-	switch (itsTVar->type())
-	{
-		case ncFloat:
-		{
-			auto tValue = Time<float>();
-			if (!theTVar->put(&tValue, 1)) return false;
-		}
-		break;
-
-		case ncDouble:
-		{
-			auto tValue = Time<double>();
-			if (!theTVar->put(&tValue, 1)) return false;
-		}
-		break;
-
-		case ncShort:
-		{
-			auto tValue = Time<short>();
-			if (!theTVar->put(&tValue, 1)) return false;
-		}
-		break;
-
-		case ncInt:
-		{
-			auto tValue = Time<int>();
-			if (!theTVar->put(&tValue, 1)) return false;
-		}
-		break;
-
-		case ncChar:
-                {
-                        auto tValue = Time<char>();
-                        if (!theTVar->put(&tValue, 1)) return false;
-                }
-                break;
-
-		case ncByte:
-                {
-                        auto tValue = Time<int8_t>();
-                        if (!theTVar->put(&tValue, 1)) return false;
-                }
-                break;
-
-		case ncNoType:
-		default:
-			cout << "NcType not supported for data" << endl;
+		return false;
 	}
 
 	// ensemble member variable
 
 	if (itsMDim && theMDim)
 	{
-		if (!(theMVar = theOutFile.add_var(itsMDim->name(), ncShort, theMDim))) return false;
+		if (!CopyVar(&theMVar, itsMVar, &theOutFile, nullptr))
+		{
+			return false;
+		}
+#if 0
+		if (!(theMVar = theOutFile.add_var(itsMDim->name(), ncShort, theMDim)))
+			return false;
 
 		CopyAtts(theMVar, itsMVar);
 
 		const long sizeM = itsMDim->size();
-		auto mValues = Values<short>(itsMVar);
+		auto mValues = ::Values<short>(itsMVar);
 		if (!theMVar->put(mValues.data(), sizeM))
 		{
-		    return false;
+			return false;
 		}
+#endif
 	}
+
 	// Add projection variable if it exists
 
 	if (itsProjectionVar)
@@ -530,16 +551,16 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 				break;
 			case ncChar:
 				if (!(outprojvar = theOutFile.add_var(itsProjectionVar->name(), ncChar)))
-                                {
-                                        return false;
-                                }
-                                break;
+				{
+					return false;
+				}
+				break;
 			case ncByte:
 				if (!(outprojvar = theOutFile.add_var(itsProjectionVar->name(), ncByte)))
-                                {
-                                        return false;
-                                }
-                                break;
+				{
+					return false;
+				}
+				break;
 
 			case ncNoType:
 			default:
@@ -592,7 +613,8 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 
 			// copy data
 			size_t totalSize = 1;
-			for (size_t i = 0; i < cursors.size(); i++) totalSize *= cursors[i];
+			for (size_t i = 0; i < cursors.size(); i++)
+				totalSize *= cursors[i];
 
 			vector<float> vals(totalSize);
 			lon->get(&vals[0], &cursors[0]);
@@ -644,127 +666,16 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 		}
 	}
 
-	switch (var->type())
-	{
-		case ncFloat:
-		{
-			const string name = var->name();
-			if (!(outvar = theOutFile.add_var(name.c_str(), ncFloat, static_cast<int>(num_dims),
-			                                 const_cast<const NcDim**>(&dims[0]))))
-			{
-				return false;
-			}
-
-			auto float_data = Values<float>();
-
-			if (!(outvar->put(&float_data[0], &cursor_position[0])))
-			{
-				return false;
-			}
-			break;
-		}
-
-		case ncDouble:
-		{
-			if (!(outvar = theOutFile.add_var(var->name(), ncDouble, static_cast<int>(num_dims),
-			                                  const_cast<const NcDim**>(&dims[0]))))
-			{
-				return false;
-			}
-
-			auto double_data = Values<double>();
-			if (!(outvar->put(&double_data[0], &cursor_position[0])))
-			{
-				return false;
-			}
-			break;
-		}
-
-		case ncShort:
-		{
-			if (!(outvar = theOutFile.add_var(var->name(), ncShort, static_cast<int>(num_dims),
-			                                  const_cast<const NcDim**>(&dims[0]))))
-			{
-				return false;
-			}
-
-			auto short_data = Values<short>();
-			if (!(outvar->put(&short_data[0], &cursor_position[0])))
-			{
-				return false;
-			}
-			break;
-		}
-
-		case ncInt:
-		{
-			if (!(outvar = theOutFile.add_var(var->name(), ncInt, static_cast<int>(num_dims),
-			                                  const_cast<const NcDim**>(&dims[0]))))
-			{
-				return false;
-			}
-
-			auto int_data = Values<int>();
-			if (!(outvar->put(&int_data[0], &cursor_position[0])))
-			{
-				return false;
-			}
-
-			break;
-		}
-
-		case ncChar:
-		{
-                        if (!(outvar = theOutFile.add_var(var->name(), ncChar, static_cast<char>(num_dims),
-                                                          const_cast<const NcDim**>(&dims[0]))))
-                        {
-                                return false;
-                        }
-
-                        auto char_data = Values<char>();
-                        if (!(outvar->put(&char_data[0], &cursor_position[0])))
-                        {
-                                return false;
-                        }
-
-                        break;
-		}
-
-		case ncByte:
-		{
-                        if (!(outvar = theOutFile.add_var(var->name(), ncByte, static_cast<int8_t>(num_dims),
-                                                          const_cast<const NcDim**>(&dims[0]))))
-                        {
-                                return false;
-                        }
-
-                        auto byte_data = Values<int8_t>();
-                        if (!(outvar->put(&byte_data[0], &cursor_position[0])))
-                        {
-                                return false;
-                        }
-
-                        break;
-		}
-	case ncNoType:
-		default:
-			cout << "NcType not supported" << endl;
-			return false;
-			break;
-	}
-
-	CopyAtts(outvar, var);
-
-#ifndef NDEBUG
- 	auto att = unique_ptr<NcAtt>(outvar->get_att("_FillValue"));
- 	assert(att->type() == outvar->type());
-#endif
+	CopyVar(&outvar, var, &theOutFile, cursor_position.data());
 
 	// Global attributes
 
 	if (!itsConvention.empty())
 	{
-		if (!theOutFile.add_att("Conventions", itsConvention.c_str())) return false;
+		if (!theOutFile.add_att("Conventions", itsConvention.c_str()))
+		{
+			return false;
+		}
 	}
 
 	time_t now;
@@ -776,14 +687,19 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 
 	datetime.erase(remove(datetime.begin(), datetime.end(), '\n'), datetime.end());
 
-	if (!theOutFile.add_att("file_creation_time", datetime.c_str())) return false;
+	if (!theOutFile.add_att("file_creation_time", datetime.c_str()))
+	{
+		return false;
+	}
 
 	if (!itsInstitution.empty())
 	{
-		if (!theOutFile.add_att("institution", itsInstitution.c_str())) return false;
+		if (!theOutFile.add_att("institution", itsInstitution.c_str()))
+			return false;
 	}
 
-	if (!theOutFile.add_att("distributor", "Finnish Meteorological Institute")) return false;
+	if (!theOutFile.add_att("distributor", "Finnish Meteorological Institute"))
+		return false;
 
 	theOutFile.sync();
 	theOutFile.close();
@@ -798,38 +714,68 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
  * Same applies for Y axis.
  */
 
-bool NFmiNetCDF::FlipX() { return itsXFlip; }
-void NFmiNetCDF::FlipX(bool theXFlip) { itsXFlip = theXFlip; }
-bool NFmiNetCDF::FlipY() { return itsYFlip; }
-void NFmiNetCDF::FlipY(bool theYFlip) { itsYFlip = theYFlip; }
+bool NFmiNetCDF::FlipX()
+{
+	return itsXFlip;
+}
+void NFmiNetCDF::FlipX(bool theXFlip)
+{
+	itsXFlip = theXFlip;
+}
+bool NFmiNetCDF::FlipY()
+{
+	return itsYFlip;
+}
+void NFmiNetCDF::FlipY(bool theYFlip)
+{
+	itsYFlip = theYFlip;
+}
 float NFmiNetCDF::XResolution()
 {
-	float x1 = itsXVar->as_float(0);
-	float x2 = itsXVar->as_float(SizeX()-1);
+	const float x1 = itsXVar->as_float(0);
+	float x2 = itsXVar->as_float(SizeX() - 1);
+	long range = SizeX();
+
+	if (x2 < x1)
+	{
+		// NO support for right - left scanning mode
+		x2 = itsXVar->as_float(1);
+		range = 2;
+	}
 
 	float delta = fabs(x2 - x1);
 	string units = Att(itsXVar, "units");
 	if (!units.empty())
 	{
-		if (units == "100  km") delta *= 100;
+		if (units == "100  km")
+			delta *= 100;
 	}
 
-	return delta / static_cast<float>((SizeX()-1));
+	return delta / static_cast<float>(range - 1);
 }
 
 float NFmiNetCDF::YResolution()
 {
-	float y1 = itsYVar->as_float(0);
-	float y2 = itsYVar->as_float(SizeY()-1);
+	const float y1 = itsYVar->as_float(0);
+	float y2 = itsYVar->as_float(SizeY() - 1);
+	long range = SizeY();
+
+	if (y2 == 0.0f)
+	{
+		// NEMO has land coordinates 0,0 *sigh*
+		y2 = itsYVar->as_float(SizeX());
+		range = 2;
+	}
 
 	float delta = fabs(y2 - y1);
 	string units = Att(itsYVar, "units");
 	if (!units.empty())
 	{
-		if (units == "100  km") delta *= 100;
+		if (units == "100  km")
+			delta *= 100;
 	}
 
-	return delta / static_cast<float>((SizeY()-1));
+	return delta / static_cast<float>(range - 1);
 }
 
 bool NFmiNetCDF::CoordinatesInRowMajorOrder(const NcVar* var)
@@ -858,13 +804,20 @@ bool NFmiNetCDF::CoordinatesInRowMajorOrder(const NcVar* var)
 	return (xCoordNum > yCoordNum);
 }
 
-bool NFmiNetCDF::HasDimension(const std::string& dimName) { return HasDimension(Param(), dimName); }
-std::string NFmiNetCDF::Att(const std::string& attName) { return Att(Param(), attName); }
+bool NFmiNetCDF::HasDimension(const std::string& dimName)
+{
+	return HasDimension(Param(), dimName);
+}
+std::string NFmiNetCDF::Att(const std::string& attName)
+{
+	return Att(Param(), attName);
+}
 // private functions
 bool NFmiNetCDF::HasDimension(const NcVar* var, const std::string& dimName)
 {
 	long num_dims = var->num_dims();
-	if (dimName == "z" && !itsZDim) return false;
+	if (dimName == "z" && !itsZDim)
+		return false;
 
 	for (int i = 0; i < num_dims; i++)
 	{
@@ -881,7 +834,8 @@ bool NFmiNetCDF::HasDimension(const NcVar* var, const std::string& dimName)
 		else if (dimName == "ensemble_member" || dimName == "member")
 			dimname = itsMDim->name();
 
-		if (static_cast<string>(dim->name()) == dimname) return true;
+		if (static_cast<string>(dim->name()) == dimname)
+			return true;
 	}
 	return false;
 }
@@ -908,14 +862,6 @@ std::string NFmiNetCDF::Att(NcVar* var, const std::string& attName)
 }
 
 template <typename T>
-vector<T> NFmiNetCDF::Values(NcVar* var)
-{
-	vector<T> values(var->num_vals(), kFloatMissing);
-	var->get(&values[0], var->num_vals());
-	return values;
-}
-
-template <typename T>
 vector<T> NFmiNetCDF::Values(NcVar* var, long timeIndex, long levelIndex)
 {
 	int num_dims = static_cast<size_t>(var->num_dims());
@@ -938,7 +884,7 @@ vector<T> NFmiNetCDF::Values(NcVar* var, long timeIndex, long levelIndex)
 		else if (levelIndex != -1 && itsZDim && dimname == itsZDim->name())
 		{
 			index = levelIndex;
-			dimsize = 1; // XXX METAN has dimsize == 2, (y, x)
+			dimsize = 1;  // XXX METAN has dimsize == 2, (y, x)
 		}
 
 		cursor_position[i] = index;
@@ -1051,9 +997,10 @@ bool NFmiNetCDF::ReadVariables()
 
 			itsXVar = var;
 
-			auto tmp = Values<float>(itsXVar);
+			auto tmp = ::Values<float>(itsXVar);
 
-			if (itsXFlip) reverse(tmp.begin(), tmp.end());
+			if (itsXFlip)
+				reverse(tmp.begin(), tmp.end());
 
 			if (tmp.size() > 1)
 			{
@@ -1068,12 +1015,14 @@ bool NFmiNetCDF::ReadVariables()
 				{
 					resolution = tmp[k] - prevX;
 
-					if (k == 1) prevResolution = resolution;
+					if (k == 1)
+						prevResolution = resolution;
 
 					if (abs(resolution - prevResolution) > MAX_COORDINATE_RESOLUTION_ERROR)
 					{
 						cerr << "X dimension resolution is not constant, diff: " << (prevResolution - resolution)
 						     << endl;
+						break;
 					}
 
 					prevResolution = resolution;
@@ -1089,9 +1038,10 @@ bool NFmiNetCDF::ReadVariables()
 
 			itsYVar = var;
 
-			auto tmp = Values<float>(itsYVar);
+			auto tmp = ::Values<float>(itsYVar);
 
-			if (itsYFlip) reverse(tmp.begin(), tmp.end());
+			if (itsYFlip)
+				reverse(tmp.begin(), tmp.end());
 
 			if (tmp.size() > 1)
 			{
@@ -1106,12 +1056,14 @@ bool NFmiNetCDF::ReadVariables()
 				{
 					resolution = tmp[k] - prevY;
 
-					if (k == 1) prevResolution = resolution;
+					if (k == 1)
+						prevResolution = resolution;
 
 					if (abs(resolution - prevResolution) > MAX_COORDINATE_RESOLUTION_ERROR)
 					{
 						cerr << "Y dimension resolution is not constant, diff: " << (prevResolution - resolution)
 						     << endl;
+						break;
 					}
 
 					prevResolution = resolution;
@@ -1164,7 +1116,8 @@ bool NFmiNetCDF::ReadVariables()
 			}
 		}
 
-		if (foundproj || varname == "latitude" || varname == "longitude") continue;
+		if (foundproj || varname == "latitude" || varname == "longitude")
+			continue;
 
 		itsParameters.push_back(var);
 	}
@@ -1203,7 +1156,7 @@ bool NFmiNetCDF::ReadAttributes()
 }
 
 // free functions
-bool CopyAtts(NcVar* newvar, NcVar* oldvar)
+bool CopyAtts(NcVar* newvar, const NcVar* oldvar)
 {
 	assert(newvar);
 	assert(oldvar);
@@ -1219,25 +1172,31 @@ bool CopyAtts(NcVar* newvar, NcVar* oldvar)
 			switch (oldvar->type())
 			{
 				case ncFloat:
-					if (!newvar->add_att(att->name(), att->as_float(0))) return false;
+					if (!newvar->add_att(att->name(), att->as_float(0)))
+						return false;
 					break;
 
 				case ncDouble:
-					if (!newvar->add_att(att->name(), att->as_double(0))) return false;
+					if (!newvar->add_att(att->name(), att->as_double(0)))
+						return false;
 					break;
 
 				case ncShort:
-					if (!newvar->add_att(att->name(), att->as_short(0))) return false;
+					if (!newvar->add_att(att->name(), att->as_short(0)))
+						return false;
 					break;
 
 				case ncInt:
-					if (!newvar->add_att(att->name(), att->as_int(0))) return false;
+					if (!newvar->add_att(att->name(), att->as_int(0)))
+						return false;
 					break;
 				case ncChar:
-					if (!newvar->add_att(att->name(), att->as_char(0))) return false;
+					if (!newvar->add_att(att->name(), att->as_char(0)))
+						return false;
 					break;
 				case ncByte:
-					if (!newvar->add_att(att->name(), att->as_ncbyte(0))) return false;
+					if (!newvar->add_att(att->name(), att->as_ncbyte(0)))
+						return false;
 					break;
 				case ncNoType:
 				default:
@@ -1293,6 +1252,97 @@ bool CopyAtts(NcVar* newvar, NcVar* oldvar)
 			}
 		}
 	}
+
+	return true;
+}
+
+bool CopyVar(NcVar** newvar, const NcVar* oldvar, NcFile* theOutFile, long* dimpos)
+{
+	const int ndims = oldvar->num_dims();
+
+	bool allocated = false;
+
+	if (!dimpos)
+	{
+		allocated = true;
+		dimpos = new long[ndims];
+	}
+
+	vector<NcDim*> dims;
+	dims.reserve(ndims);
+
+	for (int i = 0; i < ndims; i++)
+	{
+		const auto name = oldvar->get_dim(i)->name();
+		for (int j = 0; j < theOutFile->num_dims(); j++)
+		{
+			NcDim* d = theOutFile->get_dim(j);
+
+			if (strcmp(d->name(), name) == 0)
+			{
+				dims.push_back(d);
+
+				if (allocated)
+					dimpos[i] = dims[i]->size();
+			}
+		}
+	}
+
+	if (dims.size() != static_cast<size_t>(ndims))
+	{
+		// the file did not have correct dimensions (the same what oldvar has)
+		return false;
+	}
+
+	const NcDim** dimptr = const_cast<const NcDim**>(dims.data());
+
+	switch (oldvar->type())
+	{
+		case ncFloat:
+			(*newvar) = theOutFile->add_var(oldvar->name(), ncFloat, ndims, dimptr);
+			break;
+		case ncDouble:
+			(*newvar) = theOutFile->add_var(oldvar->name(), ncDouble, ndims, dimptr);
+			break;
+		case ncByte:
+			(*newvar) = theOutFile->add_var(oldvar->name(), ncByte, ndims, dimptr);
+			break;
+		case ncShort:
+			(*newvar) = theOutFile->add_var(oldvar->name(), ncShort, ndims, dimptr);
+			break;
+		case ncChar:
+			(*newvar) = theOutFile->add_var(oldvar->name(), ncChar, ndims, dimptr);
+			break;
+		case ncInt:
+			(*newvar) = theOutFile->add_var(oldvar->name(), ncInt, ndims, dimptr);
+			break;
+		default:
+			break;
+	}
+
+	if (!(*newvar))
+	{
+		return false;
+	}
+
+	CopyAtts(*newvar, oldvar);
+
+	// Put coordinate data
+
+	// Flip x values if requested
+
+	assert(*newvar);
+	auto values = ::Values<float>(oldvar, dimpos);
+
+	//        if (itsXFlip) reverse(xValues.begin(), xValues.end());
+
+	if (!(*newvar)->put(values.data(), dimpos))
+	{
+		return false;
+	}
+
+	if (allocated)
+		delete[] dimpos;
 
 	return true;
 }
