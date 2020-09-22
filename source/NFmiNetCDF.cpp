@@ -30,13 +30,19 @@ vector<T> Values(const NcVar* var, long* edges = 0)
 		edges = var->edges();
 	}
 
-	NcBool ret = var->get(values.data(), edges);
+#ifdef DEBUG
+	NcBool ret =
+#endif
+	var->get(values.data(), edges);
 
-	assert(ret);
 	if (allocated)
 	{
 		delete[] edges;
 	}
+
+#ifdef DEBUG
+	assert(ret);
+#endif
 
 	return values;
 }
