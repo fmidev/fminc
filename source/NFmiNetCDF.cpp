@@ -16,6 +16,7 @@ using namespace std;
 bool CopyAtts(NcVar* newvar, const NcVar* oldvar);
 bool CopyVar(NcVar** newvar, const NcVar* oldvar, NcFile* theOutFile, long* dimpos);
 vector<pair<string, string>> ReadGlobalAttributes(NcFile* theFile);
+std::string Att(NcVar* var, const std::string& attName);
 
 template <typename T>
 vector<T> Values(const NcVar* var, long* edges = 0)
@@ -273,7 +274,7 @@ long NFmiNetCDF::TimeIndex()
 }
 string NFmiNetCDF::TimeUnit()
 {
-	return Att(itsTVar, "units");
+	return ::Att(itsTVar, "units");
 }
 // Level
 void NFmiNetCDF::ResetLevel()
@@ -752,7 +753,7 @@ float NFmiNetCDF::XResolution()
 	}
 
 	float delta = fabs(x2 - x1);
-	string units = Att(itsXVar, "units");
+	string units = ::Att(itsXVar, "units");
 	if (!units.empty())
 	{
 		if (units == "100  km")
@@ -776,7 +777,7 @@ float NFmiNetCDF::YResolution()
 	}
 
 	float delta = fabs(y2 - y1);
-	string units = Att(itsYVar, "units");
+	string units = ::Att(itsYVar, "units");
 	if (!units.empty())
 	{
 		if (units == "100  km")
@@ -818,7 +819,7 @@ bool NFmiNetCDF::HasDimension(const std::string& dimName)
 }
 std::string NFmiNetCDF::Att(const std::string& attName)
 {
-	return Att(Param(), attName);
+	return ::Att(Param(), attName);
 }
 // private functions
 bool NFmiNetCDF::HasDimension(const NcVar* var, const std::string& dimName)
@@ -848,7 +849,7 @@ bool NFmiNetCDF::HasDimension(const NcVar* var, const std::string& dimName)
 	return false;
 }
 
-std::string NFmiNetCDF::Att(NcVar* var, const std::string& attName)
+std::string Att(NcVar* var, const std::string& attName)
 {
 	string ret("");
 	assert(var);
@@ -972,6 +973,35 @@ bool NFmiNetCDF::ReadDimensions()
 
 bool NFmiNetCDF::ReadVariables()
 {
+	const auto CheckConstantResolution = [](const vector<float>& tmp) -> bool {
+
+		// Check resolution
+
+		float resolution = 0;
+		float prevResolution = resolution;
+
+		float prevX = tmp[0];
+
+		for (unsigned int k = 1; k < tmp.size(); k++)
+		{
+			resolution = tmp[k] - prevX;
+
+			if (k == 1)
+				prevResolution = resolution;
+
+			if (abs(resolution - prevResolution) > MAX_COORDINATE_RESOLUTION_ERROR)
+			{
+				cerr << "X dimension resolution is not constant, diff: " << (prevResolution - resolution) << endl;
+				return false;
+			}
+
+			prevResolution = resolution;
+			prevX = tmp[k];
+		}
+
+		return true;
+	};
+
 	/*
 	 * Read variables from netcdf
 	 *
@@ -999,83 +1029,66 @@ bool NFmiNetCDF::ReadVariables()
 
 			continue;
 		}
-		else if (varname == static_cast<string>(itsXDim->name()) || Att(var, "standard_name") == "longitude")
+		else if (varname == static_cast<string>(itsXDim->name()) || ::Att(var, "standard_name") == "longitude" ||
+		         ::Att(var, "standard_name") == "projection_x_coordinate")
 		{
 			// X-coordinate
+			// projected files might have multiple coordinate variables, for example
+			// x&y for projected coordinates
+			// lon&lat for geographic coordinates
+			// If data is projected, then the evenly spaced grid is most likely
+			// created using projected coordinates, and that is hopefully marked
+			// by using attribute 'axis'.
+			// Therefore if a variable has attribute axis set, do not override
+			// with other coordinate variables.
+
+			if (itsXVar && ::Att(itsXVar, "axis") == "X")
+			{
+				continue;
+			}
 
 			itsXVar = var;
 
 			auto tmp = ::Values<float>(itsXVar);
 
 			if (itsXFlip)
+			{
 				reverse(tmp.begin(), tmp.end());
+			}
 
 			if (tmp.size() > 1)
 			{
-				// Check resolution
-
-				float resolution = 0;
-				float prevResolution = resolution;
-
-				float prevX = tmp[0];
-
-				for (unsigned int k = 1; k < tmp.size(); k++)
+				if (!CheckConstantResolution(tmp))
 				{
-					resolution = tmp[k] - prevX;
-
-					if (k == 1)
-						prevResolution = resolution;
-
-					if (abs(resolution - prevResolution) > MAX_COORDINATE_RESOLUTION_ERROR)
-					{
-						cerr << "X dimension resolution is not constant, diff: " << (prevResolution - resolution)
-						     << endl;
-						break;
-					}
-
-					prevResolution = resolution;
-					prevX = tmp[k];
+					cerr << "X dimension resolution is not constant\n";
 				}
 			}
 
 			continue;
 		}
-		else if (varname == static_cast<string>(itsYDim->name()) || Att(var, "standard_name") == "latitude")
+		else if (varname == static_cast<string>(itsYDim->name()) || ::Att(var, "standard_name") == "latitude")
 		{
 			// Y-coordinate
+
+			if (itsYVar && ::Att(itsYVar, "axis") == "Y")
+			{
+				continue;
+			}
 
 			itsYVar = var;
 
 			auto tmp = ::Values<float>(itsYVar);
 
 			if (itsYFlip)
+			{
 				reverse(tmp.begin(), tmp.end());
+			}
 
 			if (tmp.size() > 1)
 			{
-				// Check resolution
-
-				float resolution = 0;
-				float prevResolution = resolution;
-
-				float prevY = tmp[0];
-
-				for (unsigned int k = 1; k < tmp.size(); k++)
+				if (!CheckConstantResolution(tmp))
 				{
-					resolution = tmp[k] - prevY;
-
-					if (k == 1)
-						prevResolution = resolution;
-
-					if (abs(resolution - prevResolution) > MAX_COORDINATE_RESOLUTION_ERROR)
-					{
-						cerr << "Y dimension resolution is not constant, diff: " << (prevResolution - resolution)
-						     << endl;
-						break;
-					}
-
-					prevResolution = resolution;
-					prevY = tmp[k];
+					cerr << "Y dimension resolution is not constant\n";
 				}
 			}
 
@@ -1352,15 +1365,15 @@ bool CopyVar(NcVar** newvar, const NcVar* oldvar, NcFile* theOutFile, long* dimp
 	assert(*newvar);
 	auto values = ::Values<float>(oldvar, dimpos);
 
-	//        if (itsXFlip) reverse(xValues.begin(), xValues.end());
-
 	if (!(*newvar)->put(values.data(), dimpos))
 	{
 		return false;
 	}
 
 	if (allocated)
+	{
 		delete[] dimpos;
+	}
 
 	return true;
 }

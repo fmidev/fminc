@@ -99,7 +99,6 @@ class NFmiNetCDF
 
    private:
 	bool HasDimension(const NcVar* var, const std::string& dim);
-	std::string Att(NcVar* var, const std::string& attName);
 
 	template <typename T>
 	std::vector<T> Values(NcVar* var, long timeIndex, long levelIndex = -1);
