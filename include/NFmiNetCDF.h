@@ -69,10 +69,10 @@ class NFmiNetCDF
 
 	float Orientation() const;
 	std::string Projection() const;
-	float TrueLatitude();
+	float TrueLatitude() const;
 
 	template <typename T>
-	std::vector<T> Values(std::string theParameter);
+	std::vector<T> Values(const std::string& theParameter);
 
 	template <typename T>
 	std::vector<T> Values();

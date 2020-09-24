@@ -214,7 +214,7 @@ std::string NFmiNetCDF::Projection() const
 	return itsProjection;
 }
 
-float NFmiNetCDF::TrueLatitude()
+float NFmiNetCDF::TrueLatitude() const
 {
 	float ret = kFloatMissing;
 
@@ -314,7 +314,7 @@ long NFmiNetCDF::LevelIndex()
 	return itsLevelIndex;
 }
 template <typename T>
-vector<T> NFmiNetCDF::Values(std::string theParameter)
+vector<T> NFmiNetCDF::Values(const std::string& theParameter)
 {
 	vector<T> values;
 
@@ -330,11 +330,17 @@ vector<T> NFmiNetCDF::Values(std::string theParameter)
 	return values;
 }
 
+template vector<float> NFmiNetCDF::Values(const std::string&);
+template vector<double> NFmiNetCDF::Values(const std::string&);
+
 template <typename T>
 vector<T> NFmiNetCDF::Values()
 {
 	return Values<T>(Param(), TimeIndex(), LevelIndex());
 }
+
+template vector<float> NFmiNetCDF::Values();
+template vector<double> NFmiNetCDF::Values();
 
 NcVar* NFmiNetCDF::GetVariable(const string& varName) const
 {
@@ -903,6 +909,9 @@ vector<T> NFmiNetCDF::Values(NcVar* var, long timeIndex, long levelIndex)
 
 	return values;
 }
+
+template vector<float> NFmiNetCDF::Values(NcVar*, long, long);
+template vector<double> NFmiNetCDF::Values(NcVar*, long, long);
 
 bool NFmiNetCDF::ReadDimensions()
 {
