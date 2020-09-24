@@ -14,30 +14,32 @@ const float NFmiNetCDF::kFloatMissing = 32700.0f;
 using namespace std;
 
 bool CopyAtts(NcVar* newvar, const NcVar* oldvar);
-bool CopyVar(NcVar** newvar, const NcVar* oldvar, NcFile* theOutFile, long* dimpos);
+bool CopyVar(NcVar** newvar, NcVar* oldvar, NcFile* theOutFile, long* dimension_position, long* dimension_length);
 vector<pair<string, string>> ReadGlobalAttributes(NcFile* theFile);
 std::string Att(NcVar* var, const std::string& attName);
 
 template <typename T>
-vector<T> Values(const NcVar* var, long* edges = 0)
+vector<T> Values(const NcVar* var, long* lengths = 0)
 {
-	vector<T> values(var->num_vals(), NFmiNetCDF::kFloatMissing);
-
 	bool allocated = false;
-	if (edges == 0)
+	if (lengths == 0)
 	{
 		allocated = true;
-		edges = var->edges();
+		lengths = var->edges();
 	}
+
+	const size_t N = std::accumulate(lengths, lengths + var->num_dims(), 1, [](long a, long b) { return a * b; });
+
+	vector<T> values(N, NFmiNetCDF::kFloatMissing);
 
 #ifdef DEBUG
 	NcBool ret =
 #endif
-	var->get(values.data(), edges);
+	    var->get(values.data(), lengths);
 
 	if (allocated)
 	{
-		delete[] edges;
+		delete[] lengths;
 	}
 
 #ifdef DEBUG
@@ -350,36 +352,6 @@ bool NFmiNetCDF::HasVariable(const string& name) const
 	return var == nullptr ? false : true;
 }
 
-bool NFmiNetCDF::WriteSliceToCSV(const string& theFileName)
-{
-	ofstream theOutFile;
-	theOutFile.open(theFileName.c_str());
-
-	auto Xs = ::Values<float>(itsXVar);
-
-	if (itsXFlip)
-		reverse(Xs.begin(), Xs.end());
-
-	auto Ys = ::Values<float>(itsYVar);
-
-	if (itsYFlip)
-		reverse(Ys.begin(), Ys.end());
-
-	auto values = Values<float>();
-
-	for (unsigned int y = 0; y < Ys.size(); y++)
-	{
-		for (unsigned int x = 0; x < Xs.size(); x++)
-		{
-			theOutFile << Xs[x] << "," << Ys[y] << "," << values[y * Xs.size() + x] << endl;
-		}
-	}
-
-	theOutFile.close();
-
-	return true;
-}
-
 /*
  * WriteSlice(string)
  *
@@ -419,38 +391,50 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 	// Dimensions
 
 	if (!(theXDim = theOutFile.add_dim(itsXDim->name(), SizeX())))
+	{
 		return false;
+	}
 
 	if (!(theYDim = theOutFile.add_dim(itsYDim->name(), SizeY())))
+	{
 		return false;
+	}
 
 	// Add z dimension if it exists in the original data
 
 	if (itsZDim)
 	{
 		if (!(theZDim = theOutFile.add_dim(itsZDim->name(), 1)))
+		{
 			return false;
+		}
 	}
 
 	// Our unlimited dimension
 
 	if (itsTDim)
+	{
 		if (!(theTDim = theOutFile.add_dim(itsTDim->name())))
+		{
 			return false;
+		}
+	}
 
 	// ensemble member dimension
 	if (itsMDim)
 	{
 		const size_t sizeM = itsMDim->size();
 		if (!(theMDim = theOutFile.add_dim(itsMDim->name(), sizeM)))
+		{
 			return false;
+		}
 	}
 
 	// Variables
 
 	// x
 
-	if (!CopyVar(&theXVar, itsXVar, &theOutFile, nullptr))
+	if (!CopyVar(&theXVar, itsXVar, &theOutFile, nullptr, nullptr))
 	{
 		return false;
 	}
@@ -461,7 +445,7 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 	*/
 	// y
 
-	if (!CopyVar(&theYVar, itsYVar, &theOutFile, nullptr))
+	if (!CopyVar(&theYVar, itsYVar, &theOutFile, nullptr, nullptr))
 	{
 		return false;
 	}
@@ -494,8 +478,8 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 	// t
 
 	long time_index = TimeIndex();
-
-	if (!CopyVar(&theTVar, itsTVar, &theOutFile, &time_index))
+	long time_size = 1;
+	if (!CopyVar(&theTVar, itsTVar, &theOutFile, &time_index, &time_size))
 	{
 		return false;
 	}
@@ -504,7 +488,7 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 
 	if (itsMDim && theMDim)
 	{
-		if (!CopyVar(&theMVar, itsMVar, &theOutFile, nullptr))
+		if (!CopyVar(&theMVar, itsMVar, &theOutFile, nullptr, nullptr))
 		{
 			return false;
 		}
@@ -641,7 +625,7 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 	int num_dims = var->num_dims();
 
 	vector<NcDim*> dims(num_dims);
-	vector<long> cursor_position(num_dims);
+	vector<long> cursor_position(num_dims), dimension_length(num_dims);
 
 	for (int i = 0; i < num_dims; i++)
 	{
@@ -650,31 +634,36 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 		if (dimname == itsTDim->name())
 		{
 			dims[i] = theTDim;
-			cursor_position[i] = 1;
+			cursor_position[i] = TimeIndex();
+			dimension_length[i] = 1;
 		}
 		else if (theZDim && dimname == itsZDim->name())
 		{
 			dims[i] = theZDim;
-			cursor_position[i] = 1;
+			cursor_position[i] = LevelIndex();
+			dimension_length[i] = 1;
 		}
 		else if (dimname == itsXDim->name())
 		{
 			dims[i] = theXDim;
-			cursor_position[i] = itsXDim->size();
+			cursor_position[i] = 0;
+			dimension_length[i] = itsXDim->size();
 		}
 		else if (dimname == itsYDim->name())
 		{
 			dims[i] = theYDim;
-			cursor_position[i] = itsYDim->size();
+			cursor_position[i] = 0;
+			dimension_length[i] = itsYDim->size();
 		}
 		else if (dimname == itsMDim->name())
 		{
 			dims[i] = theMDim;
 			cursor_position[i] = 1;
+			dimension_length[i] = 1;
 		}
 	}
 
-	CopyVar(&outvar, var, &theOutFile, cursor_position.data());
+	CopyVar(&outvar, var, &theOutFile, cursor_position.data(), dimension_length.data());
 
 	// Global attributes
 
@@ -997,7 +986,7 @@ bool NFmiNetCDF::ReadVariables()
 
 			if (abs(resolution - prevResolution) > MAX_COORDINATE_RESOLUTION_ERROR)
 			{
-				cerr << "X dimension resolution is not constant, diff: " << (prevResolution - resolution) << endl;
+				cerr << "Dimension resolution is not constant, diff: " << (prevResolution - resolution) << endl;
 				return false;
 			}
 
@@ -1293,16 +1282,27 @@ bool CopyAtts(NcVar* newvar, const NcVar* oldvar)
 	return true;
 }
 
-bool CopyVar(NcVar** newvar, const NcVar* oldvar, NcFile* theOutFile, long* dimpos)
+bool CopyVar(NcVar** newvar, NcVar* oldvar, NcFile* theOutFile, long* dimension_position, long* dimension_length)
 {
+	// dimension_position: where to start copying from
+	// dimension_length: how large a chunk to copy
+	//
+	// if either are not set, default is to start from 0,0,0,..
+	// and copy everything
+	//
+	// this is what we want for example for geographic coordinates
+	//
+	// for time dimensions we only want to copy the current time step
+
 	const int ndims = oldvar->num_dims();
 
 	bool allocated = false;
 
-	if (!dimpos)
+	if (!dimension_position)
 	{
 		allocated = true;
-		dimpos = new long[ndims];
+		dimension_position = new long[ndims];
+		dimension_length = new long[ndims];
 	}
 
 	vector<NcDim*> dims;
@@ -1320,7 +1320,10 @@ bool CopyVar(NcVar** newvar, const NcVar* oldvar, NcFile* theOutFile, long* dimp
 				dims.push_back(d);
 
 				if (allocated)
-					dimpos[i] = dims[i]->size();
+				{
+					dimension_position[i] = 0;
+					dimension_length[i] = dims[i]->size();
+				}
 			}
 		}
 	}
@@ -1364,21 +1367,23 @@ bool CopyVar(NcVar** newvar, const NcVar* oldvar, NcFile* theOutFile, long* dimp
 
 	CopyAtts(*newvar, oldvar);
 
-	// Put coordinate data
-
-	// Flip x values if requested
-
 	assert(*newvar);
-	auto values = ::Values<float>(oldvar, dimpos);
+	if (!oldvar->set_cur(dimension_position))
+	{
+		return false;
+	}
 
-	if (!(*newvar)->put(values.data(), dimpos))
+	auto values = ::Values<float>(oldvar, dimension_length);
+
+	if (!(*newvar)->put(values.data(), dimension_length))
 	{
 		return false;
 	}
 
 	if (allocated)
 	{
-		delete[] dimpos;
+		delete[] dimension_position;
+		delete[] dimension_length;
 	}
 
 	return true;

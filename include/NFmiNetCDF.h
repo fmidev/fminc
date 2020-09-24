@@ -79,8 +79,6 @@ class NFmiNetCDF
 
 	bool WriteSlice(const std::string& theFileName);
 
-	bool WriteSliceToCSV(const std::string& theFileName);
-
 	bool FlipX();
 	void FlipX(bool theXFlip);
 
