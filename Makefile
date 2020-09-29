@@ -20,7 +20,7 @@ CC = /usr/bin/g++
 
 # Default compiler flags
 
-CFLAGS = -fPIC -std=c++11 -DUNIX -O2 -DNDEBUG $(MAINFLAGS) 
+CFLAGS = -fPIC -std=c++11 -DUNIX -O2 -g -DNDEBUG $(MAINFLAGS)
 LDFLAGS = -shared
 
 # Special modes
@@ -133,7 +133,7 @@ install:
 	  $(INSTALL_DATA) include/$$hdr $(includedir)/$$hdr; \
 	done
 
-	$(INSTALL_DATA) lib/* $(libdir)
+	$(INSTALL_LIB) lib/* $(libdir)
 	
 objdir:
 	@mkdir -p $(objdir)
