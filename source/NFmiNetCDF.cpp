@@ -662,7 +662,7 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 			cursor_position[i] = 0;
 			dimension_length[i] = itsYDim->size();
 		}
-		else if (dimname == itsMDim->name())
+		else if (theMDim && dimname == itsMDim->name())
 		{
 			dims[i] = theMDim;
 			cursor_position[i] = 1;
@@ -952,7 +952,8 @@ bool NFmiNetCDF::ReadDimensions()
 			itsTDim = dim;
 		}
 
-		if (name == "level" || name == "lev" || name == "depth" || name == "pressure" || name == "height")
+		if (name == "level" || name == "lev" || name == "depth" || name == "pressure" || name == "height" ||
+		    name == "deptht")
 		{
 			itsZDim = dim;
 		}
@@ -1020,7 +1021,7 @@ bool NFmiNetCDF::ReadVariables()
 
 		string varname = var->name();
 
-		if (itsZDim && varname == static_cast<string>(itsZDim->name()))
+		if (itsZDim && (varname == static_cast<string>(itsZDim->name()) || ::Att(var, "axis") == "Z"))
 		{
 			/*
 			 * Assume level variable name equals to level dimension name. If it does not, how
