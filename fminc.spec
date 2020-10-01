@@ -1,7 +1,7 @@
 %define LIBNAME fminc
 Summary: fminc library
 Name: lib%{LIBNAME}
-Version: 20.9.24
+Version: 20.10.1
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -56,6 +56,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/*.h
 
 %changelog
+* Thu Oct  1 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.1-1.fmi
+- Support nemo dimension deptht
 * Thu Sep 24 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.24-1.fmi
 - A bit more refactoring
 * Tue Sep 22 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.22-1.fmi
