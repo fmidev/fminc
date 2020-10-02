@@ -952,8 +952,7 @@ bool NFmiNetCDF::ReadDimensions()
 			itsTDim = dim;
 		}
 
-		if (name == "level" || name == "lev" || name == "depth" || name == "pressure" || name == "height" ||
-		    name == "deptht")
+		if (name == "level" || name == "lev" || name.find("depth") != string::npos || name == "pressure" || name == "height")
 		{
 			itsZDim = dim;
 		}
@@ -997,7 +996,6 @@ bool NFmiNetCDF::ReadVariables()
 
 			if (abs(resolution - prevResolution) > MAX_COORDINATE_RESOLUTION_ERROR)
 			{
-				cerr << "Dimension resolution is not constant, diff: " << (prevResolution - resolution) << endl;
 				return false;
 			}
 
