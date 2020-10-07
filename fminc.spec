@@ -1,8 +1,8 @@
 %define LIBNAME fminc
 Summary: fminc library
 Name: lib%{LIBNAME}
-Version: 20.10.1
-Release: 2%{dist}.fmi
+Version: 20.10.7
+Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -56,6 +56,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/*.h
 
 %changelog
+* Wed Oct  7 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.7-1.fmi
+- Better handling of attribute values
 * Thu Oct  1 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.1-2.fmi
 - ... and also depthu, depthv etc
 * Thu Oct  1 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.1-1.fmi
