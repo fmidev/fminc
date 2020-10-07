@@ -5,9 +5,9 @@
 #include <ctime>
 #include <fstream>
 #include <iomanip>
+#include <numeric>
 #include <sstream>
 #include <stdexcept>
-#include <numeric>
 
 const float MAX_COORDINATE_RESOLUTION_ERROR = 1e-4f;
 const float NFmiNetCDF::kFloatMissing = 32700.0f;
@@ -859,13 +859,35 @@ std::string Att(NcVar* var, const std::string& attName)
 	for (unsigned short i = 0; i < var->num_atts(); i++)
 	{
 		auto att = unique_ptr<NcAtt>(var->get_att(i));
-
 		if (static_cast<string>(att->name()) == attName)
 		{
-			char* s = att->as_string(0);
-			ret = static_cast<string>(s);
-			delete[] s;
-			break;
+			switch (att->type())
+			{
+				case ncFloat:
+					ret = std::to_string(att->as_float(0));
+					break;
+				case ncDouble:
+					ret = std::to_string(att->as_double(0));
+					break;
+				case ncByte:
+					ret = std::to_string(att->as_ncbyte(0));
+					break;
+				case ncShort:
+					ret = std::to_string(att->as_short(0));
+					break;
+				case ncInt:
+					ret = std::to_string(att->as_int(0));
+					break;
+				case ncChar:
+				{
+					char* s = att->as_string(0);
+					ret = static_cast<string>(s);
+					delete[] s;
+				}
+				break;
+				default:
+					break;
+			}
 		}
 	}
 
