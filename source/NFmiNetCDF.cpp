@@ -12,6 +12,9 @@
 const float MAX_COORDINATE_RESOLUTION_ERROR = 1e-4f;
 const float NFmiNetCDF::kFloatMissing = 32700.0f;
 
+static std::atomic<bool> xCoordinateWarning(true);
+static std::atomic<bool> yCoordinateWarning(true);
+
 using namespace std;
 
 bool CopyAtts(NcVar* newvar, const NcVar* oldvar);
@@ -1084,9 +1087,10 @@ bool NFmiNetCDF::ReadVariables()
 
 			if (tmp.size() > 1)
 			{
-				if (!CheckConstantResolution(tmp))
+				if (xCoordinateWarning && !CheckConstantResolution(tmp))
 				{
-					cerr << "X dimension resolution is not constant\n";
+					cerr << "Warning: X dimension resolution is not constant\n";
+					xCoordinateWarning = false;
 				}
 			}
 
@@ -1112,9 +1116,10 @@ bool NFmiNetCDF::ReadVariables()
 
 			if (tmp.size() > 1)
 			{
-				if (!CheckConstantResolution(tmp))
+				if (yCoordinateWarning && !CheckConstantResolution(tmp))
 				{
-					cerr << "Y dimension resolution is not constant\n";
+					cerr << "Warning: Y dimension resolution is not constant\n";
+					yCoordinateWarning = false;
 				}
 			}
 
