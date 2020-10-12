@@ -2,7 +2,7 @@
 Summary: fminc library
 Name: lib%{LIBNAME}
 Version: 20.10.12
-Release: 1%{dist}.fmi
+Release: 2%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -56,6 +56,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/*.h
 
 %changelog
+* Mon Oct 12 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.12-2.fmi
+- Fix memory leak(s)
 * Mon Oct 12 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.12-1.fmi
 - Reduce log spam
 * Wed Oct  7 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.7-1.fmi
