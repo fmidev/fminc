@@ -12,6 +12,9 @@
 const float MAX_COORDINATE_RESOLUTION_ERROR = 1e-4f;
 const float NFmiNetCDF::kFloatMissing = 32700.0f;
 
+static std::atomic<bool> xCoordinateWarning(true);
+static std::atomic<bool> yCoordinateWarning(true);
+
 using namespace std;
 
 bool CopyAtts(NcVar* newvar, const NcVar* oldvar);
@@ -880,9 +883,8 @@ std::string Att(NcVar* var, const std::string& attName)
 					break;
 				case ncChar:
 				{
-					char* s = att->as_string(0);
-					ret = static_cast<string>(s);
-					delete[] s;
+					const auto ptr = unique_ptr<char[]>(att->as_string(0));
+					ret = static_cast<string>(ptr.get());
 				}
 				break;
 				default:
@@ -974,7 +976,8 @@ bool NFmiNetCDF::ReadDimensions()
 			itsTDim = dim;
 		}
 
-		if (name == "level" || name == "lev" || name.find("depth") != string::npos || name == "pressure" || name == "height")
+		if (name == "level" || name == "lev" || name.find("depth") != string::npos || name == "pressure" ||
+		    name == "height")
 		{
 			itsZDim = dim;
 		}
@@ -1084,9 +1087,10 @@ bool NFmiNetCDF::ReadVariables()
 
 			if (tmp.size() > 1)
 			{
-				if (!CheckConstantResolution(tmp))
+				if (xCoordinateWarning && !CheckConstantResolution(tmp))
 				{
-					cerr << "X dimension resolution is not constant\n";
+					cerr << "Warning: X dimension resolution is not constant\n";
+					xCoordinateWarning = false;
 				}
 			}
 
@@ -1112,9 +1116,10 @@ bool NFmiNetCDF::ReadVariables()
 
 			if (tmp.size() > 1)
 			{
-				if (!CheckConstantResolution(tmp))
+				if (yCoordinateWarning && !CheckConstantResolution(tmp))
 				{
-					cerr << "Y dimension resolution is not constant\n";
+					cerr << "Warning: Y dimension resolution is not constant\n";
+					yCoordinateWarning = false;
 				}
 			}
 
@@ -1153,9 +1158,8 @@ bool NFmiNetCDF::ReadVariables()
 			auto att = unique_ptr<NcAtt>(var->get_att(k));
 			if (static_cast<string>(att->name()) == "grid_mapping_name")
 			{
-				const char* s = att->as_string(0);
-				itsProjection = string(s);
-				delete[] s;
+				const auto ptr = unique_ptr<char[]>(att->as_string(0));
+				itsProjection = string(ptr.get());
 
 				itsProjectionVar = var;
 				foundproj = true;
@@ -1180,9 +1184,9 @@ vector<pair<string, string>> ReadGlobalAttributes(NcFile* theFile)
 
 	for (int i = 0; i < theFile->num_atts(); i++)
 	{
-		const NcAtt* att = theFile->get_att(i);
-
-		ret.emplace_back(att->name(), string(att->as_string(0)));
+		const auto att = unique_ptr<NcAtt>(theFile->get_att(i));
+		const auto ptr = unique_ptr<char[]>(att->as_string(0));
+		ret.emplace_back(att->name(), string(ptr.get()));
 	}
 
 	return ret;
@@ -1279,7 +1283,8 @@ bool CopyAtts(NcVar* newvar, const NcVar* oldvar)
 
 		else if (nctype == ncChar)
 		{
-			if (!newvar->add_att(att->name(), att->as_string(0)))
+			const auto ptr = unique_ptr<char[]>(att->as_string(0));
+			if (!newvar->add_att(att->name(), ptr.get()))
 			{
 				return false;
 			}
@@ -1303,7 +1308,8 @@ bool CopyAtts(NcVar* newvar, const NcVar* oldvar)
 
 		else
 		{
-			if (!newvar->add_att(att->name(), att->as_string(0)))
+			const auto ptr = unique_ptr<char[]>(att->as_string(0));
+			if (!newvar->add_att(att->name(), ptr.get()))
 			{
 				return false;
 			}
