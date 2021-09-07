@@ -20,6 +20,7 @@ FMI netcdf library
 %package devel
 Summary: development package
 Group: Development/Tools
+Requires: netcdf-cxx-devel
 
 %description devel
 Headers and static libraries for fminc
