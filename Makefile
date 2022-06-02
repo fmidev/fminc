@@ -20,12 +20,12 @@ CC = /usr/bin/g++
 
 # Default compiler flags
 
-CFLAGS = -fPIC -std=c++11 -DUNIX -O2 -g -DNDEBUG $(MAINFLAGS)
+CFLAGS = -fPIC -std=c++17 -DUNIX -O2 -g -DNDEBUG $(MAINFLAGS)
 LDFLAGS = -shared
 
 # Special modes
 
-CFLAGS_DEBUG = -fPIC -std=c++11 -DUNIX -O0 -ggdb -DDEBUG $(MAINFLAGS) $(EXTRAFLAGS)
+CFLAGS_DEBUG = -fPIC -std=c++17 -DUNIX -O0 -ggdb -DDEBUG $(MAINFLAGS) $(EXTRAFLAGS)
 
 LDFLAGS_DEBUG = -shared -Wl,-soname,lib$(LIB).so
 

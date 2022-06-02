@@ -1,17 +1,17 @@
 %define LIBNAME fminc
 Summary: fminc library
 Name: lib%{LIBNAME}
-Version: 20.10.12
-Release: 2%{dist}.fmi
+Version: 22.6.2
+Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
 Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Provides: %{LIBNAME}
-BuildRequires: netcdf-devel >= 4.1.1
-BuildRequires: netcdf-cxx-devel
-BuildRequires: boost169-devel >= 1.66
+BuildRequires: netcdf-devel >= 4.7.0
+BuildRequires: netcdf-cxx-devel >= 4.2
+BuildRequires: boost169-devel
 Requires: boost169-filesystem
 
 %description
