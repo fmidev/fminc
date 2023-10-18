@@ -13,6 +13,8 @@ BuildRequires: netcdf-devel >= 4.1.1
 BuildRequires: netcdf-cxx-devel
 BuildRequires: boost169-devel >= 1.66
 Requires: boost169-filesystem
+Requires: netcdf-devel >= 4.1.1
+Requires: netcdf-cxx-devel
 
 %description
 FMI netcdf library
