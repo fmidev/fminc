@@ -37,7 +37,8 @@ ifneq ($(INCLUDE), "")
 		$(INCLUDE)
 endif
 
-LIBS =  
+LIBDIRS = -L/usr/lib64/boost169
+LIBS = -lboost_filesystem
 
 # Common library compiling template
 
@@ -120,7 +121,7 @@ release: objdir $(LIB)
 
 $(LIB): $(OBJS)
 	ar rcs $(LIBDIR)/lib$(LIB).a $(OBJFILES)
-	$(CC) -o $(LIBDIR)/lib$(LIB).so $(LDFLAGS) $(OBJFILES)
+	$(CC) -o $(LIBDIR)/lib$(LIB).so $(LDFLAGS) $(LIBDIRS) $(LIBS) $(OBJFILES)
 
 clean:
 	rm -f $(LIBDIR)/*.so* $(LIBDIR)/*.a $(OBJFILES) *~ source/*~ include/*~

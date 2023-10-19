@@ -1,7 +1,7 @@
 %define LIBNAME fminc
 Summary: fminc library
 Name: lib%{LIBNAME}
-Version: 22.6.2
+Version: 23.10.19
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -13,8 +13,8 @@ BuildRequires: netcdf-devel >= 4.7.0
 BuildRequires: netcdf-cxx-devel >= 4.2
 BuildRequires: boost169-devel
 Requires: boost169-filesystem
-Requires: netcdf-devel >= 4.1.1
-Requires: netcdf-cxx-devel
+Requires: netcdf-devel >= 4.7.0
+Requires: netcdf-cxx-devel >= 4.2
 
 %description
 FMI netcdf library
@@ -26,6 +26,7 @@ Requires: netcdf-cxx-devel
 
 %description devel
 Headers and static libraries for fminc
+Requires: fminc
 
 %prep
 rm -rf $RPM_BUILD_ROOT
@@ -59,6 +60,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/*.h
 
 %changelog
+* Thu Oct 19 2023 Mikko Partio <mikko.partio@fmi.fi> - 22.10.19-1.fmi
+- spec file dependency update
 * Mon Oct 12 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.12-2.fmi
 - Fix memory leak(s)
 * Mon Oct 12 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.12-1.fmi
