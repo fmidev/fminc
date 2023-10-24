@@ -1003,8 +1003,8 @@ bool NFmiNetCDF::ReadDimensions()
 
 bool NFmiNetCDF::ReadVariables()
 {
-	const auto CheckConstantResolution = [](const vector<float>& tmp) -> bool {
-
+	const auto ResolutionDrift = [](const vector<float>& tmp) -> float
+	{
 		// Check resolution
 
 		float resolution = 0;
@@ -1016,19 +1016,24 @@ bool NFmiNetCDF::ReadVariables()
 		{
 			resolution = tmp[k] - prevX;
 
+			if (tmp[k] == -1 || prevX == -1)
+			{
+				prevX = tmp[k];
+				continue;
+			}
 			if (k == 1)
 				prevResolution = resolution;
 
 			if (abs(resolution - prevResolution) > MAX_COORDINATE_RESOLUTION_ERROR)
 			{
-				return false;
+				return abs(resolution - prevResolution);
 			}
 
 			prevResolution = resolution;
 			prevX = tmp[k];
 		}
 
-		return true;
+		return 0.0f;
 	};
 
 	/*
@@ -1087,9 +1092,9 @@ bool NFmiNetCDF::ReadVariables()
 
 			if (tmp.size() > 1)
 			{
-				if (xCoordinateWarning && !CheckConstantResolution(tmp))
+				if (xCoordinateWarning && ResolutionDrift(tmp) > 0.0f)
 				{
-					cerr << "Warning: X dimension resolution is not constant\n";
+					cerr << "Warning: X dimension resolution is not constant: " << ResolutionDrift(tmp) << "\n";
 					xCoordinateWarning = false;
 				}
 			}
@@ -1116,9 +1121,9 @@ bool NFmiNetCDF::ReadVariables()
 
 			if (tmp.size() > 1)
 			{
-				if (yCoordinateWarning && !CheckConstantResolution(tmp))
+				if (yCoordinateWarning && ResolutionDrift(tmp) > 0.0f)
 				{
-					cerr << "Warning: Y dimension resolution is not constant\n";
+					cerr << "Warning: Y dimension resolution is not constant: " << ResolutionDrift(tmp) << "\n";
 					yCoordinateWarning = false;
 				}
 			}
