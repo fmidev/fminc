@@ -746,18 +746,41 @@ void NFmiNetCDF::FlipY(bool theYFlip)
 }
 float NFmiNetCDF::XResolution()
 {
-	const float x1 = itsXVar->as_float(0);
+	float x1 = itsXVar->as_float(0);
 	float x2 = itsXVar->as_float(SizeX() - 1);
 	long range = SizeX();
+	float delta;
 
-	if (x2 < x1)
+	if (std::string(itsXVar->name()) == "nav_lon")
 	{
-		// NO support for right - left scanning mode
-		x2 = itsXVar->as_float(1);
+		// nemo
+		// only sea points have latitude and longitude defined
+		// land points have value -1, which is NOT marked as a missing
+		// value to the data
+		int i = -1;
+
+		do
+		{
+			x1 = itsXVar->as_float(++i);
+		} while (x1 == -1.f && i < range);
+
+		do
+		{
+			x2 = itsXVar->as_float(++i);
+		} while ((x2 == -1.f || x2 == x1) && i < range * 2);
+
+		if (x1 == -1.f || x2 == -1.f)
+			// exploding head
+			std::cerr << "Found only invalid or constant X-coordinates" << std::endl;
+
+		delta = fabs(x2 - x1);
 		range = 2;
 	}
+	else
+	{
+		delta = fabs(x2 - x1);
+	}
 
-	float delta = fabs(x2 - x1);
 	string units = ::Att(itsXVar, "units");
 	if (!units.empty())
 	{
@@ -770,18 +793,38 @@ float NFmiNetCDF::XResolution()
 
 float NFmiNetCDF::YResolution()
 {
-	const float y1 = itsYVar->as_float(0);
+	float y1 = itsYVar->as_float(0);
 	float y2 = itsYVar->as_float(SizeY() - 1);
 	long range = SizeY();
+	float delta;
 
-	if (y2 == 0.0f)
+	if (std::string(itsYVar->name()) == "nav_lat")
 	{
-		// NEMO has land coordinates 0,0 *sigh*
-		y2 = itsYVar->as_float(SizeX());
+		// nemo
+		int i = -1;
+
+		do
+		{
+			y1 = itsYVar->as_float(++i);
+		} while (y1 == -1.f && i < range);
+
+		do
+		{
+			y2 = itsYVar->as_float(++i);
+		} while ((y2 == -1.f || y2 == y1) && i < range * 2);
+
+		if (y1 == -1.f || y2 == -1.f)
+			// exploding head
+			std::cerr << "Found only invalid or constant Y-coordinates" << std::endl;
+
+		delta = fabs(y2 - y1);
 		range = 2;
 	}
+	else
+	{
+		delta = fabs(y2 - y1);
+	}
 
-	float delta = fabs(y2 - y1);
 	string units = ::Att(itsYVar, "units");
 	if (!units.empty())
 	{
