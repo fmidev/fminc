@@ -744,44 +744,46 @@ void NFmiNetCDF::FlipY(bool theYFlip)
 {
 	itsYFlip = theYFlip;
 }
-float NFmiNetCDF::XResolution()
+
+float Resolution(NcVar* var, long size)
 {
-	float x1 = itsXVar->as_float(0);
-	float x2 = itsXVar->as_float(SizeX() - 1);
-	long range = SizeX();
+	float a = var->as_float(0);
+	float b = var->as_float(size - 1);
+	long range = size;
 	float delta;
 
-	if (std::string(itsXVar->name()) == "nav_lon")
+	const std::string missing = ::Att(var, "missing_value");
+
+	if (missing.empty() == false && (a == std::stod(missing) || b == std::stod(missing)))
 	{
-		// nemo
+		// case nemo
 		// only sea points have latitude and longitude defined
-		// land points have value -1, which is NOT marked as a missing
-		// value to the data
 		int i = -1;
+		float fmissing = std::stod(missing);
 
 		do
 		{
-			x1 = itsXVar->as_float(++i);
-		} while (x1 == -1.f && i < range);
+			a = var->as_float(++i);
+		} while (a == fmissing && i < range * 2);
 
 		do
 		{
-			x2 = itsXVar->as_float(++i);
-		} while ((x2 == -1.f || x2 == x1) && i < range * 2);
+			b = var->as_float(++i);
+		} while ((b == fmissing || a == b) && i < range * 3);
 
-		if (x1 == -1.f || x2 == -1.f)
+		if (a == fmissing || b == fmissing)
 			// exploding head
-			std::cerr << "Found only invalid or constant X-coordinates" << std::endl;
+			std::cerr << "Found only invalid or constant coordinates for " << var->name() << std::endl;
 
-		delta = fabs(x2 - x1);
+		delta = fabs(b - a);
 		range = 2;
 	}
 	else
 	{
-		delta = fabs(x2 - x1);
+		delta = fabs(b - a);
 	}
 
-	string units = ::Att(itsXVar, "units");
+	string units = ::Att(var, "units");
 	if (!units.empty())
 	{
 		if (units == "100  km")
@@ -791,48 +793,14 @@ float NFmiNetCDF::XResolution()
 	return delta / static_cast<float>(range - 1);
 }
 
+float NFmiNetCDF::XResolution()
+{
+	return Resolution(itsXVar, SizeX());
+}
+
 float NFmiNetCDF::YResolution()
 {
-	float y1 = itsYVar->as_float(0);
-	float y2 = itsYVar->as_float(SizeY() - 1);
-	long range = SizeY();
-	float delta;
-
-	if (std::string(itsYVar->name()) == "nav_lat")
-	{
-		// nemo
-		int i = -1;
-
-		do
-		{
-			y1 = itsYVar->as_float(++i);
-		} while (y1 == -1.f && i < range);
-
-		do
-		{
-			y2 = itsYVar->as_float(++i);
-		} while ((y2 == -1.f || y2 == y1) && i < range * 2);
-
-		if (y1 == -1.f || y2 == -1.f)
-			// exploding head
-			std::cerr << "Found only invalid or constant Y-coordinates" << std::endl;
-
-		delta = fabs(y2 - y1);
-		range = 2;
-	}
-	else
-	{
-		delta = fabs(y2 - y1);
-	}
-
-	string units = ::Att(itsYVar, "units");
-	if (!units.empty())
-	{
-		if (units == "100  km")
-			delta *= 100;
-	}
-
-	return delta / static_cast<float>(range - 1);
+	return Resolution(itsYVar, SizeY());
 }
 
 bool NFmiNetCDF::CoordinatesInRowMajorOrder(const NcVar* var)
