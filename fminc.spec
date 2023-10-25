@@ -13,8 +13,6 @@ BuildRequires: netcdf-devel >= 4.7.0
 BuildRequires: netcdf-cxx-devel >= 4.2
 BuildRequires: boost169-devel
 Requires: boost169-filesystem
-Requires: netcdf-devel >= 4.7.0
-Requires: netcdf-cxx-devel >= 4.2
 
 %description
 FMI netcdf library
@@ -22,8 +20,10 @@ FMI netcdf library
 %package devel
 Summary: development package
 Group: Development/Tools
-Requires: netcdf-cxx-devel
 Requires: fminc
+Requires: netcdf-devel >= 4.7.0
+Requires: netcdf-cxx-devel >= 4.2
+
 
 %description devel
 Headers and static libraries for fminc
