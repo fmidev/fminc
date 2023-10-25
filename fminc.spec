@@ -1,7 +1,7 @@
 %define LIBNAME fminc
 Summary: fminc library
 Name: lib%{LIBNAME}
-Version: 23.10.24
+Version: 23.10.25
 Release: 1%{dist}.fmi
 License: FMI
 Group: Development/Tools
@@ -60,7 +60,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/*.h
 
 %changelog
-* Tue Oct 24 2023 Mikko Partio <mikko.partio@fmi.fi> - 22.10.24-1.fmi
+* Wed Oct 25 2023 Mikko Partio <mikko.partio@fmi.fi> - 22.10.25-1.fmi
 - Fix reading of nemo coordinate data
 * Thu Oct 19 2023 Mikko Partio <mikko.partio@fmi.fi> - 22.10.19-1.fmi
 - spec file dependency update
