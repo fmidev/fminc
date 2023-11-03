@@ -11,6 +11,7 @@ jobs:
       rpm_base_image: rockylinux/rockylinux:8
       rpm_spec_file: fminc.spec
       rpm_additional_repositories: "epel-release,https://download.fmi.fi/smartmet-open/rhel/8/x86_64/smartmet-open-release-latest-8.noarch.rpm"
+      rpm_enable_repositories: powertools
       build_image: false
     secrets:
       RPM_API_HOST: ${{ secrets.RPM_API_HOST }}
