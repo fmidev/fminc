@@ -143,7 +143,7 @@ objdir:
 rpm:    clean
 	mkdir -p $(rpmsourcedir) ; \
         if [ -e $(LIB).spec ]; then \
-          tar -C .. --exclude .svn -cf $(rpmsourcedir)/lib$(LIB).tar $(LIB) ; \
+          tar --transform "s,^./,libfminc/,"  --exclude-vcs -cf $(rpmsourcedir)/lib$(LIB).tar . ; \
           gzip -f $(rpmsourcedir)/lib$(LIB).tar ; \
           rpmbuild -ta $(rpmsourcedir)/lib$(LIB).tar.gz ; \
           rm -f $(rpmsourcedir)/lib$(LIB).tar.gz ; \

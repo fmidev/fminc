@@ -1,14 +1,23 @@
-%define LIBNAME fminc
+%if !0%{?version:1}
+%define version 23.10.25
+%endif
+
+%if !0%{?release:1}
+%define release 1
+%endif
+
+%define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
+
 Summary: fminc library
-Name: lib%{LIBNAME}
-Version: 23.10.25
-Release: 1%{dist}.fmi
+Name: libfminc
+Version: %{version}
+Release: %{release}%{dist}.fmi
 License: FMI
 Group: Development/Tools
 URL: http://www.fmi.fi
 Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
-Provides: %{LIBNAME}
+Provides: fminc
 BuildRequires: netcdf-devel >= 4.7.0
 BuildRequires: netcdf-cxx-devel >= 4.2
 BuildRequires: boost169-devel
@@ -31,7 +40,7 @@ Headers and static libraries for fminc
 %prep
 rm -rf $RPM_BUILD_ROOT
 
-%setup -q -n "%{LIBNAME}" 
+%setup -q -n "libfminc" 
 
 %build
 make %{_smp_mflags} 
@@ -52,11 +61,11 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,0644)
-%{_libdir}/lib%{LIBNAME}.so
+%{_libdir}/libfminc.so
 
 %files devel
 %defattr(-,root,root,0644)
-%{_libdir}/lib%{LIBNAME}.a
+%{_libdir}/libfminc.a
 %{_includedir}/*.h
 
 %changelog
