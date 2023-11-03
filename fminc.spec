@@ -21,6 +21,8 @@ Provides: fminc
 BuildRequires: netcdf-devel >= 4.7.0
 BuildRequires: netcdf-cxx-devel >= 4.2
 BuildRequires: boost169-devel
+BuildRequires: make
+BuildRequires: gcc-c++
 Requires: boost169-filesystem
 
 %description
