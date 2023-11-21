@@ -988,7 +988,7 @@ bool NFmiNetCDF::ReadDimensions()
 		}
 
 		if (name == "level" || name == "lev" || name.find("depth") != string::npos || name == "pressure" ||
-		    name == "height")
+		    name == "height" || name == "hybrid")
 		{
 			itsZDim = dim;
 		}
