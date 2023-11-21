@@ -20,7 +20,6 @@ using namespace std;
 bool CopyAtts(NcVar* newvar, const NcVar* oldvar);
 bool CopyVar(NcVar** newvar, NcVar* oldvar, NcFile* theOutFile, long* dimension_position, long* dimension_length);
 vector<pair<string, string>> ReadGlobalAttributes(NcFile* theFile);
-std::string Att(NcVar* var, const std::string& attName);
 
 template <typename T>
 vector<T> Values(const NcVar* var, long* lengths = 0)
@@ -286,7 +285,7 @@ long NFmiNetCDF::TimeIndex()
 }
 string NFmiNetCDF::TimeUnit()
 {
-	return ::Att(itsTVar, "units");
+	return NFmiNetCDF::Att(itsTVar, "units");
 }
 // Level
 void NFmiNetCDF::ResetLevel()
@@ -354,6 +353,16 @@ NcVar* NFmiNetCDF::GetVariable(const string& varName) const
 			return itsParameters[i];
 	}
 	throw out_of_range("Variable '" + varName + "' does not exist");
+}
+
+NcVar* NFmiNetCDF::GetProjectionVariable() const
+{
+	if (!itsProjectionVar)
+	{
+		throw out_of_range("Projection variable does not exist");
+	}
+
+	return itsProjectionVar;
 }
 
 bool NFmiNetCDF::HasVariable(const string& name) const
@@ -752,14 +761,14 @@ float Resolution(NcVar* var, long size)
 	long range = size;
 	float delta;
 
-	const std::string missing = ::Att(var, "missing_value");
+	const std::string missing = NFmiNetCDF::Att(var, "missing_value");
 
 	if (missing.empty() == false && (a == std::stod(missing) || b == std::stod(missing)))
 	{
 		// case nemo
 		// only sea points have latitude and longitude defined
 		int i = -1;
-		float fmissing = std::stod(missing);
+		float fmissing = std::stof(missing);
 
 		do
 		{
@@ -783,7 +792,7 @@ float Resolution(NcVar* var, long size)
 		delta = fabs(b - a);
 	}
 
-	string units = ::Att(var, "units");
+	string units = NFmiNetCDF::Att(var, "units");
 	if (!units.empty())
 	{
 		if (units == "100  km")
@@ -835,8 +844,9 @@ bool NFmiNetCDF::HasDimension(const std::string& dimName)
 }
 std::string NFmiNetCDF::Att(const std::string& attName)
 {
-	return ::Att(Param(), attName);
+	return NFmiNetCDF::Att(Param(), attName);
 }
+
 // private functions
 bool NFmiNetCDF::HasDimension(const NcVar* var, const std::string& dimName)
 {
@@ -865,7 +875,7 @@ bool NFmiNetCDF::HasDimension(const NcVar* var, const std::string& dimName)
 	return false;
 }
 
-std::string Att(NcVar* var, const std::string& attName)
+std::string NFmiNetCDF::Att(NcVar* var, const std::string& attName)
 {
 	string ret("");
 	assert(var);
@@ -1060,7 +1070,7 @@ bool NFmiNetCDF::ReadVariables()
 
 		string varname = var->name();
 
-		if (itsZDim && (varname == static_cast<string>(itsZDim->name()) || ::Att(var, "axis") == "Z"))
+		if (itsZDim && (varname == static_cast<string>(itsZDim->name()) || NFmiNetCDF::Att(var, "axis") == "Z"))
 		{
 			/*
 			 * Assume level variable name equals to level dimension name. If it does not, how
@@ -1074,8 +1084,9 @@ bool NFmiNetCDF::ReadVariables()
 
 			continue;
 		}
-		else if (varname == static_cast<string>(itsXDim->name()) || ::Att(var, "standard_name") == "longitude" ||
-		         ::Att(var, "standard_name") == "projection_x_coordinate")
+		else if (varname == static_cast<string>(itsXDim->name()) ||
+		         NFmiNetCDF::Att(var, "standard_name") == "longitude" ||
+		         NFmiNetCDF::Att(var, "standard_name") == "projection_x_coordinate")
 		{
 			// X-coordinate
 			// projected files might have multiple coordinate variables, for example
@@ -1087,7 +1098,7 @@ bool NFmiNetCDF::ReadVariables()
 			// Therefore if a variable has attribute axis set, do not override
 			// with other coordinate variables.
 
-			if (itsXVar && ::Att(itsXVar, "axis") == "X")
+			if (itsXVar && NFmiNetCDF::Att(itsXVar, "axis") == "X")
 			{
 				continue;
 			}
@@ -1112,11 +1123,11 @@ bool NFmiNetCDF::ReadVariables()
 
 			continue;
 		}
-		else if (varname == static_cast<string>(itsYDim->name()) || ::Att(var, "standard_name") == "latitude")
+		else if (varname == static_cast<string>(itsYDim->name()) || NFmiNetCDF::Att(var, "standard_name") == "latitude")
 		{
 			// Y-coordinate
 
-			if (itsYVar && ::Att(itsYVar, "axis") == "Y")
+			if (itsYVar && NFmiNetCDF::Att(itsYVar, "axis") == "Y")
 			{
 				continue;
 			}

@@ -95,6 +95,9 @@ class NFmiNetCDF
 	bool HasDimension(const std::string& dimName);
 	std::string Att(const std::string& attName);
 
+	NcVar* GetProjectionVariable() const;
+	static std::string Att(NcVar* var, const std::string& attName);
+
    private:
 	bool HasDimension(const NcVar* var, const std::string& dim);
 
