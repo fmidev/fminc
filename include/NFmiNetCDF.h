@@ -67,9 +67,9 @@ class NFmiNetCDF
 	template <typename T>
 	T Lon0();
 
-	float Orientation() const;
+	double Orientation() const;
 	std::string Projection() const;
-	float TrueLatitude() const;
+	double TrueLatitude() const;
 
 	template <typename T>
 	std::vector<T> Values(const std::string& theParameter);
@@ -85,8 +85,8 @@ class NFmiNetCDF
 	bool FlipY();
 	void FlipY(bool theYFlip);
 
-	float XResolution();
-	float YResolution();
+	double XResolution();
+	double YResolution();
 
 	NcVar* GetVariable(const std::string& varName) const;
 	bool HasVariable(const std::string& name) const;

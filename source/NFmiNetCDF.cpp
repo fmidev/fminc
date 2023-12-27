@@ -242,9 +242,9 @@ string NFmiNetCDF::Convention() const
 {
 	return itsConvention;
 }
-float NFmiNetCDF::Orientation() const
+double NFmiNetCDF::Orientation() const
 {
-	float ret = kFloatMissing;
+	double ret = kFloatMissing;
 
 	NcVar* var = itsDataFile->get_var("stereographic");
 
@@ -256,7 +256,9 @@ float NFmiNetCDF::Orientation() const
 	if (!att)
 		return ret;
 
-	return att->as_float(0);
+	auto type = att->type();
+	auto val = (type == ncDouble) ? att->as_double(0) : att->as_float(0);
+	return ToSamePrecision<double>(val);
 }
 
 std::string NFmiNetCDF::Projection() const
@@ -264,9 +266,9 @@ std::string NFmiNetCDF::Projection() const
 	return itsProjection;
 }
 
-float NFmiNetCDF::TrueLatitude() const
+double NFmiNetCDF::TrueLatitude() const
 {
-	float ret = kFloatMissing;
+	double ret = kFloatMissing;
 
 	NcVar* var = itsDataFile->get_var("stereographic");
 
@@ -278,7 +280,9 @@ float NFmiNetCDF::TrueLatitude() const
 	if (!att)
 		return ret;
 
-	return att->as_float(0);
+	auto type = att->type();
+	auto val = (type == ncDouble) ? att->as_double(0) : att->as_float(0);
+	return ToSamePrecision<double>(val);
 }
 
 // Params
@@ -803,7 +807,7 @@ void NFmiNetCDF::FlipY(bool theYFlip)
 	itsYFlip = theYFlip;
 }
 
-float Resolution(NcVar* var, long size)
+double Resolution(NcVar* var, long size)
 {
 	float a = var->as_float(0);
 	float b = var->as_float(size - 1);
@@ -851,15 +855,15 @@ float Resolution(NcVar* var, long size)
 
 	float reso = delta / static_cast<float>(range - 1);
 	int num_digits = NumberOfDecimalDigits(std::to_string(a));
-	return ToPrecision<float>(reso, num_digits);
+	return ToPrecision<double>(reso, num_digits);
 }
 
-float NFmiNetCDF::XResolution()
+double NFmiNetCDF::XResolution()
 {
 	return Resolution(itsXVar, SizeX());
 }
 
-float NFmiNetCDF::YResolution()
+double NFmiNetCDF::YResolution()
 {
 	return Resolution(itsYVar, SizeY());
 }
