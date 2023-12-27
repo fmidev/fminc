@@ -23,7 +23,9 @@ BuildRequires: netcdf-cxx-devel >= 4.2
 BuildRequires: boost169-devel
 BuildRequires: make
 BuildRequires: gcc-c++
+BuildRequires: fmt-devel
 Requires: boost169-filesystem
+Requires: fmt
 
 %description
 FMI netcdf library

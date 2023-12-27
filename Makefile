@@ -38,7 +38,7 @@ ifneq ($(INCLUDE), "")
 endif
 
 LIBDIRS = -L/usr/lib64/boost169
-LIBS = -lboost_filesystem
+LIBS = -lboost_filesystem -lfmt
 
 # Common library compiling template
 

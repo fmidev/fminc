@@ -3,6 +3,7 @@
 #include <boost/filesystem.hpp>
 #include <cmath>
 #include <ctime>
+#include <fmt/format.h>
 #include <fstream>
 #include <iomanip>
 #include <numeric>
@@ -15,11 +16,57 @@ const float NFmiNetCDF::kFloatMissing = 32700.0f;
 static std::atomic<bool> xCoordinateWarning(true);
 static std::atomic<bool> yCoordinateWarning(true);
 
+const bool USE_IMPROVED_PRECISION =
+    getenv("FMINC_USE_IMPROVED_PRECISION") != nullptr && getenv("FMINC_USE_IMPROVED_PRECISION")[0] == '1';
+
 using namespace std;
 
 bool CopyAtts(NcVar* newvar, const NcVar* oldvar);
 bool CopyVar(NcVar** newvar, NcVar* oldvar, NcFile* theOutFile, long* dimension_position, long* dimension_length);
 vector<pair<string, string>> ReadGlobalAttributes(NcFile* theFile);
+
+int NumberOfDecimalDigits(std::string str)
+{
+	// - remove all trailing zeros
+	// - count number of digits
+	str.erase(str.find_last_not_of('0') + 1, std::string::npos);
+	const auto dot = str.find('.');
+	size_t num_digits = (dot == std::string::npos) ? 0 : str.length() - dot - 1;
+	num_digits = std::min(num_digits, static_cast<size_t>(8));  // prevent neverending floats to inflate digitcount
+	return static_cast<int>(num_digits);
+}
+
+template <typename T, typename U>
+T ToPrecision(U val, int num_digits)
+{
+	if (USE_IMPROVED_PRECISION == false)
+	{
+		return static_cast<T>(val);
+	}
+
+	std::string val_str = fmt::format("{:.{}f}", val, num_digits);
+
+	if (std::is_same<T, float>::value)
+	{
+		return std::stof(val_str);
+	}
+	else if (std::is_same<T, double>::value)
+	{
+		return std::stod(val_str);
+	}
+}
+template <typename T, typename U>
+T ToSamePrecision(U val)
+{
+	// If casting from float to double, we might get
+	// some unwanted extra decimal digits.
+	// Make sure that after casting we have the same
+	// number of digits.
+
+	int num_digits = NumberOfDecimalDigits(std::to_string(val));
+
+	return ToPrecision<T>(val, num_digits);
+}
 
 template <typename T>
 vector<T> Values(const NcVar* var, long* lengths = 0)
@@ -394,7 +441,7 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 	{
 		if (!boost::filesystem::create_directories(dir))
 		{
-			cerr << "Unable to create directory " << dir << endl;
+			fmt::print("Unable to create directory {}\n", dir);
 			return false;
 		}
 	}
@@ -403,7 +450,7 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 
 	if (!theOutFile.is_valid())
 	{
-		cerr << "Unable to create file " << theFileName << endl;
+		fmt::print("Unable to create file {}\n", theFileName);
 		return false;
 	}
 
@@ -575,7 +622,9 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 
 			case ncNoType:
 			default:
-				cout << "NcType not supported" << endl;
+				fmt::print("NcType {} is not supported for variable {}\n", itsProjectionVar->type(),
+				           itsProjectionVar->name());
+				break;
 		}
 		CopyAtts(outprojvar, itsProjectionVar);
 
@@ -781,9 +830,10 @@ float Resolution(NcVar* var, long size)
 		} while ((b == fmissing || a == b) && i < range * 3);
 
 		if (a == fmissing || b == fmissing)
+		{
 			// exploding head
-			std::cerr << "Found only invalid or constant coordinates for " << var->name() << std::endl;
-
+			fmt::print("Found only invalid or constant coordinates for {}\n", var->name());
+		}
 		delta = fabs(b - a);
 		range = 2;
 	}
@@ -799,7 +849,9 @@ float Resolution(NcVar* var, long size)
 			delta *= 100;
 	}
 
-	return delta / static_cast<float>(range - 1);
+	float reso = delta / static_cast<float>(range - 1);
+	int num_digits = NumberOfDecimalDigits(std::to_string(a));
+	return ToPrecision<float>(reso, num_digits);
 }
 
 float NFmiNetCDF::XResolution()
@@ -1011,11 +1063,13 @@ bool NFmiNetCDF::ReadDimensions()
 
 	if (!itsYDim || !itsXDim || (!itsTDim || !itsTDim->is_valid()))
 	{
-		cout << "Required dimensions not found" << endl
-		     << "x dim: " << (itsXDim ? "found" : "not found") << endl
-		     << "y dim: " << (itsYDim ? "found" : "not found") << endl
-		     << "time dim: " << (itsTDim ? "found " : "not found ")
-		     << "is valid: " << (itsTDim && itsTDim->is_valid() ? "yes" : "no") << endl;
+		fmt::print("All required dimensions not found\n");
+		fmt::print("x dim: {}\n", (itsXDim ? "found" : "not found"));
+		fmt::print("y dim: {}\n", (itsYDim ? "found" : "not found"));
+		fmt::print("t dim: {}\n", (itsTDim ? "found" : "not found"));
+		fmt::print("t dim is valid: {}\n", (itsTDim && itsTDim->is_valid() ? "yes" : "no"));
+		fmt::print("z dim (optional): {}\n", (itsZDim ? "found" : "not found"));
+		fmt::print("m dim (optional): {}\n", (itsMDim ? "found" : "not found"));
 		return false;
 	}
 
@@ -1116,7 +1170,7 @@ bool NFmiNetCDF::ReadVariables()
 			{
 				if (xCoordinateWarning && ResolutionDrift(tmp) > 0.0f)
 				{
-					cerr << "Warning: X dimension resolution is not constant: " << ResolutionDrift(tmp) << "\n";
+					fmt::print("Warning: X dimension resolution is not constant: {}\n", ResolutionDrift(tmp));
 					xCoordinateWarning = false;
 				}
 			}
@@ -1145,7 +1199,7 @@ bool NFmiNetCDF::ReadVariables()
 			{
 				if (yCoordinateWarning && ResolutionDrift(tmp) > 0.0f)
 				{
-					cerr << "Warning: Y dimension resolution is not constant: " << ResolutionDrift(tmp) << "\n";
+					fmt::print("Warning: Y dimension resolution is not constant: {}\n", ResolutionDrift(tmp));
 					yCoordinateWarning = false;
 				}
 			}
@@ -1288,7 +1342,8 @@ bool CopyAtts(NcVar* newvar, const NcVar* oldvar)
 					break;
 				case ncNoType:
 				default:
-					cout << "NcType not supported for Var" << endl;
+					fmt::print("NcType {} not supported for variable {}\n", oldvar->type(), oldvar->name());
+					break;
 			}
 		}
 
@@ -1452,3 +1507,151 @@ bool CopyVar(NcVar** newvar, NcVar* oldvar, NcFile* theOutFile, long* dimension_
 
 	return true;
 }
+
+template <typename T>
+T NFmiNetCDF::Lat0()
+{
+	T ret = kFloatMissing;
+	auto var = itsDataFile->get_var("latitude");
+
+	if (var)
+	{
+		auto type = var->type();
+		auto val = (type == ncDouble) ? var->as_double(0) : var->as_float(0);
+		ret = ToSamePrecision<T>(val);
+	}
+
+	return ret;
+}
+
+template float NFmiNetCDF::Lat0<float>();
+template double NFmiNetCDF::Lat0<double>();
+
+template <typename T>
+T NFmiNetCDF::Lon0()
+{
+	T ret = kFloatMissing;
+	auto var = itsDataFile->get_var("longitude");
+	if (var)
+	{
+		auto type = var->type();
+		auto val = (type == ncDouble) ? var->as_double(0) : var->as_float(0);
+		ret = ToSamePrecision<T>(val);
+	}
+	return ret;
+}
+
+template float NFmiNetCDF::Lon0<float>();
+template double NFmiNetCDF::Lon0<double>();
+
+template <typename T>
+T NFmiNetCDF::X0()
+{
+	T ret = kFloatMissing;
+	if (Projection() == "polar_stereographic")
+	{
+		auto var = itsDataFile->get_var("longitude");
+		if (var)
+		{
+			auto type = var->type();
+			auto val = (type == ncDouble) ? var->as_double(0) : var->as_float(0);
+			ret = ToSamePrecision<T>(val);
+		}
+	}
+	else
+	{
+		assert(itsXVar);
+		auto type = itsXVar->type();
+		auto val = (type == ncDouble) ? itsXVar->as_double(0) : itsXVar->as_float(0);
+		ret = ToSamePrecision<T>(val);
+	}
+	return ret;
+}
+
+template float NFmiNetCDF::X0<float>();
+template double NFmiNetCDF::X0<double>();
+
+template <typename T>
+T NFmiNetCDF::Y0()
+{
+	T ret = kFloatMissing;
+
+	if (Projection() == "polar_stereographic")
+	{
+		auto var = itsDataFile->get_var("latitude");
+		if (var)
+		{
+			auto type = var->type();
+			auto val = (type == ncDouble) ? var->as_double(0) : var->as_float(0);
+			ret = ToSamePrecision<T>(val);
+		}
+	}
+	else
+	{
+		assert(itsYVar);
+		auto type = itsYVar->type();
+		auto val = (type == ncDouble) ? itsYVar->as_double(0) : itsYVar->as_float(0);
+		ret = ToSamePrecision<T>(val);
+	}
+	return ret;
+}
+
+template float NFmiNetCDF::Y0<float>();
+template double NFmiNetCDF::Y0<double>();
+
+template <typename T>
+T NFmiNetCDF::X1()
+{
+	T ret = kFloatMissing;
+
+	if (Projection() == "polar_stereographic")
+	{
+		auto var = itsDataFile->get_var("longitude");
+		if (var)
+		{
+			auto type = var->type();
+			auto val = (type == ncDouble) ? var->as_double(0) : var->as_float(0);
+			ret = ToSamePrecision<T>(val);
+		}
+	}
+	else
+	{
+		assert(itsXVar);
+		auto type = itsXVar->type();
+		size_t num = itsXVar->num_vals() - 1;
+		auto val = (type == ncDouble) ? itsXVar->as_double(num) : itsXVar->as_float(num);
+		ret = ToSamePrecision<T>(val);
+	}
+	return ret;
+}
+template float NFmiNetCDF::X1<float>();
+template double NFmiNetCDF::X1<double>();
+
+template <typename T>
+T NFmiNetCDF::Y1()
+{
+	T ret = kFloatMissing;
+
+	if (Projection() == "polar_stereographic")
+	{
+		auto var = itsDataFile->get_var("latitude");
+		if (var)
+		{
+			auto type = var->type();
+			auto val = (type == ncDouble) ? var->as_double(0) : var->as_float(0);
+			ret = ToSamePrecision<T>(val);
+		}
+	}
+	else
+	{
+		assert(itsYVar);
+		auto type = itsYVar->type();
+		size_t num = itsYVar->num_vals() - 1;
+		auto val = (type == ncDouble) ? itsYVar->as_double(num) : itsYVar->as_float(num);
+		ret = ToSamePrecision<T>(val);
+	}
+	return ret;
+}
+
+template float NFmiNetCDF::Y1<float>();
+template double NFmiNetCDF::Y1<double>();
