@@ -1,5 +1,7 @@
 LIB = fminc
 
+RHEL_MAJOR_VERSION := $(shell awk -F'[="]' '/VERSION_ID/ { print substr($$3, 1, 1) }' /etc/os-release)
+
 MAINFLAGS = -Wall -W -Wno-unused-parameter -Werror
 
 EXTRAFLAGS = -Wpointer-arith \
@@ -29,16 +31,21 @@ CFLAGS_DEBUG = -fPIC -std=c++17 -DUNIX -O0 -ggdb -DDEBUG $(MAINFLAGS) $(EXTRAFLA
 
 LDFLAGS_DEBUG = -shared -Wl,-soname,lib$(LIB).so
 
-INCLUDES = -I include \
-           -isystem /usr/include/boost169
+INCLUDES = -I include
 
 ifneq ($(INCLUDE), "")
   INCLUDES := $(INCLUDES) \
 		$(INCLUDE)
 endif
 
-LIBDIRS = -L/usr/lib64/boost169
+LIBDIRS =
 LIBS = -lboost_filesystem -lfmt
+
+ifeq ($(RHEL_MAJOR_VERSION),8)
+  INCLUDES := $(INCLUDES) -isystem /usr/include/boost169
+  LIBDIRS = -L/usr/lib64/boost169
+endif
+
 
 # Common library compiling template
 

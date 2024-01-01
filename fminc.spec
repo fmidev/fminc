@@ -8,6 +8,12 @@
 
 %define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
 
+%if %{distnum} == 8
+%define boost boost169
+%else
+%define boost boost
+%endif
+
 Summary: fminc library
 Name: libfminc
 Version: %{version}
@@ -20,11 +26,12 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Provides: fminc
 BuildRequires: netcdf-devel >= 4.7.0
 BuildRequires: netcdf-cxx-devel >= 4.2
-BuildRequires: boost169-devel
+BuildRequires: %{boost}-devel
 BuildRequires: make
 BuildRequires: gcc-c++
 BuildRequires: fmt-devel
-Requires: boost169-filesystem
+BuildRequires: gawk
+Requires: %{boost}-filesystem
 Requires: fmt
 
 %description

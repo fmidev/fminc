@@ -9,6 +9,7 @@
 #include <numeric>
 #include <sstream>
 #include <stdexcept>
+#include <atomic>
 
 const float MAX_COORDINATE_RESOLUTION_ERROR = 1e-4f;
 const float NFmiNetCDF::kFloatMissing = 32700.0f;
