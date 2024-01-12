@@ -1182,7 +1182,9 @@ bool NFmiNetCDF::ReadVariables()
 
 			continue;
 		}
-		else if (varname == static_cast<string>(itsYDim->name()) || NFmiNetCDF::Att(var, "standard_name") == "latitude")
+		else if (varname == static_cast<string>(itsYDim->name()) ||
+		         NFmiNetCDF::Att(var, "standard_name") == "latitude" ||
+		         NFmiNetCDF::Att(var, "standard_name") == "projection_y_coordinate")
 		{
 			// Y-coordinate
 
