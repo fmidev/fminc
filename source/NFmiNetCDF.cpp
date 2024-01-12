@@ -1,5 +1,6 @@
 #include "NFmiNetCDF.h"
 #include <algorithm>
+#include <atomic>
 #include <boost/filesystem.hpp>
 #include <cmath>
 #include <ctime>
@@ -9,7 +10,6 @@
 #include <numeric>
 #include <sstream>
 #include <stdexcept>
-#include <atomic>
 
 const float MAX_COORDINATE_RESOLUTION_ERROR = 1e-4f;
 const float NFmiNetCDF::kFloatMissing = 32700.0f;
@@ -853,9 +853,28 @@ double Resolution(NcVar* var, long size)
 		if (units == "100  km")
 			delta *= 100;
 	}
-
 	float reso = delta / static_cast<float>(range - 1);
-	int num_digits = NumberOfDecimalDigits(std::to_string(a));
+
+	// How many digits to preserve?
+	// Let's check how many digits the coordinate values contain!
+	//
+	// But:
+	// - if we check the first value only, we might get wrong result
+	// (eg. in projected domains x0 can be 0, meaning zero decimal
+	// digits)
+	// - can't check all values, that's too much.
+	// - can't check first and last, that's not enough.
+	// - check first ten and pick the one with most digits, that should be enough.
+
+	int num_digits = -1;
+	int cnt = (var->num_vals() < 10) ? var->num_vals() : 10;
+	for (int i = 0; i < cnt; i++)
+	{
+		int _n = NumberOfDecimalDigits(std::to_string(var->as_float(i)));
+
+		num_digits = (_n > num_digits) ? _n : num_digits;
+	}
+
 	return ToPrecision<double>(reso, num_digits);
 }
 
