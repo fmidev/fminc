@@ -32,7 +32,7 @@ BuildRequires: gcc-c++
 BuildRequires: fmt-devel
 BuildRequires: gawk
 Requires: %{boost}-filesystem
-Requires: fmt
+Requires: fmt-libs
 
 %description
 FMI netcdf library

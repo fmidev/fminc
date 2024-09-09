@@ -627,7 +627,7 @@ bool NFmiNetCDF::WriteSlice(const std::string& theFileName)
 
 			case ncNoType:
 			default:
-				fmt::print("NcType {} is not supported for variable {}\n", itsProjectionVar->type(),
+				fmt::print("NcType {} is not supported for variable {}\n", fmt::underlying(itsProjectionVar->type()),
 				           itsProjectionVar->name());
 				break;
 		}
@@ -1368,7 +1368,8 @@ bool CopyAtts(NcVar* newvar, const NcVar* oldvar)
 					break;
 				case ncNoType:
 				default:
-					fmt::print("NcType {} not supported for variable {}\n", oldvar->type(), oldvar->name());
+					fmt::print("NcType {} not supported for variable {}\n", fmt::underlying(oldvar->type()),
+					           oldvar->name());
 					break;
 			}
 		}
