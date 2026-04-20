@@ -29,10 +29,10 @@ BuildRequires: netcdf-cxx-devel >= 4.2
 BuildRequires: %{boost}-devel
 BuildRequires: make
 BuildRequires: gcc-c++
-BuildRequires: fmt-devel
+BuildRequires: fmt-devel >= 12.1
 BuildRequires: gawk
 Requires: %{boost}-filesystem
-Requires: fmt-libs
+Requires: fmt-libs >= 12.1
 
 %description
 FMI netcdf library
